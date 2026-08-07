@@ -35,7 +35,7 @@ select{width:100%;padding:12px;background:#111722;color:var(--text);border:1px s
 </head>
 <body>
 <div class="wrap">
-<header><div><h1>よくあるファンタジー世界のバトルゲーム</h1><div class="sub">NPC戦 試供版 v0.2</div></div><button id="resetBtn" class="btn secondary hidden">最初から</button></header>
+<header><div><h1>よくあるファンタジー世界のバトルゲーム</h1><div class="sub">NPC戦 試供版 v0.3</div></div><button id="resetBtn" class="btn secondary hidden">最初から</button></header>
 
 <section id="setup" class="panel">
   <h2>部隊編成</h2>
@@ -44,11 +44,20 @@ select{width:100%;padding:12px;background:#111722;color:var(--text);border:1px s
     <div><label>自軍ユニットA</label><select id="p1"></select></div>
     <div><label>自軍ユニットB</label><select id="p2"></select></div>
   </div>
-  <label>対戦NPC</label>
-  <select id="npcSelect">
-    <option value="crow_bonret">クロウ＋ボンレット（後半爆発型）</option>
-    <option value="guren_lowja">紅蓮＋ロウジャ（妨害型）</option>
-  </select>
+  <div class="grid2">
+    <div>
+      <label>NPC戦モード</label>
+      <select id="npcMode">
+        <option value="random">ランダムモード（固定NPCデッキからランダム）</option>
+        <option value="fixed">固定モード（練習用）</option>
+      </select>
+    </div>
+    <div id="npcFixedBox" class="hidden">
+      <label>固定NPCデッキ</label>
+      <select id="npcSelect"></select>
+    </div>
+  </div>
+  <p id="npcModeHelp" class="small">ランダムモードでは登録済みの固定NPCデッキから1組が選ばれます。対戦開始後、敵の正体は伏せられます。</p>
   <div id="preview" class="grid2" style="margin-top:14px"></div>
   <div style="margin-top:14px"><button id="startBtn" class="btn">対戦開始</button></div>
 </section>
@@ -97,16 +106,333 @@ const CHARS = {
  jackeen:{id:'jackeen',name:'暗殺者（笑）・ジャキーン',role:'武勇',race:'斥候♂',rarity:2,power:960,charisma:400,intel:370,skill:{id:'recon',name:'威力偵察',cost:2,type:'normal',text:'相手の現在戦力を公開し、武力1.0倍分減少'},commands:{recruit:3,scheme:2,prepare:3}}
 };
 const NPCS = {
- crow_bonret:{name:'クロウ＋ボンレット',units:['crow','bonret'],turns:[
+ crow_bonret:{name:'クロウ＋ボンレット',style:'後半爆発型',units:['crow','bonret'],turns:[
   [['bonret','recruit'],['bonret','recruit'],['bonret','recruit'],['crow','scheme']],
   [['crow','prepare'],['crow','scheme'],['crow','scheme'],['bonret','prepare']],
   [['crow','prepare'],['bonret','prepare'],['crow','recruit'],['crow','recruit']]
  ]},
- guren_lowja:{name:'紅蓮＋ロウジャ',units:['guren','lowja'],turns:[
+ guren_lowja:{name:'紅蓮＋ロウジャ',style:'妨害型',units:['guren','lowja'],turns:[
   [['guren','prepare'],['lowja','scheme'],['guren','recruit'],['lowja','prepare']],
   [['lowja','prepare'],['guren','prepare'],['guren','recruit'],['lowja','scheme']],
   [['guren','prepare'],['guren','scheme'],['guren','scheme'],['lowja','scheme']]
+ ]},
+ ggg_lowja:{name:'GGG＋ロウジャ',style:'準備破壊型',units:['ggg','lowja'],turns:[
+  [['ggg','prepare'],['lowja','prepare'],['ggg','prepare'],['ggg','prepare']],
+  [['ggg','scheme'],['ggg','scheme'],['ggg','scheme'],['lowja','scheme']],
+  [['lowja','scheme'],['lowja','scheme'],['ggg','prepare'],['lowja','prepare']]
+ ]},
+ tsukune_jackeen:{name:'ツクネ＋ジャキーン',style:'決戦型',units:['tsukune','jackeen'],turns:[
+  [['tsukune','recruit'],['tsukune','recruit'],['tsukune','recruit'],['tsukune','recruit']],
+  [['tsukune','prepare'],['tsukune','recruit'],['tsukune','recruit'],['tsukune','recruit']],
+  [['jackeen','prepare'],['jackeen','prepare'],['jackeen','scheme'],['tsukune','scheme']]
+ ]},
+ crow_jackeen:{name:'クロウ＋ジャキーン',style:'強化偵察型',units:['crow','jackeen'],turns:[
+  [['crow','scheme'],['crow','scheme'],['crow','scheme'],['jackeen','prepare']],
+  [['crow','prepare'],['jackeen','recruit'],['jackeen','recruit'],['jackeen','recruit']],
+  [['crow','prepare'],['jackeen','prepare'],['crow','recruit'],['crow','recruit']]
+ ]},
+ ggg_guren:{name:'GGG＋紅蓮',style:'レーザー妨害型',units:['ggg','guren'],turns:[
+  [['guren','prepare'],['ggg','scheme'],['ggg','scheme'],['ggg','scheme']],
+  [['guren','prepare'],['ggg','prepare'],['ggg','prepare'],['ggg','prepare']],
+  [['ggg','prepare'],['guren','prepare'],['guren','scheme'],['guren','scheme']]
  ]}
+};
+let G=null, timerId=null;
+let logFlow={auto:false,skip:false,resolver:null};
+const $=s=>document.querySelector(s);
+function fmt(n){return Math.floor(n).toLocaleString('ja-JP')}
+function charCard(c){return `<div class="character"><h3>${c.name}</h3><div class="tags">${c.role} / ${c.race} / ★${c.rarity}</div><div class="stats"><b>武力 ${c.power}</b><b>カリスマ ${c.charisma}</b><b>知略 ${c.intel}</b></div><div class="skill"><b>${c.skill.name}</b>　準備${c.skill.cost}<br>${c.skill.text}</div></div>`}
+function initSetup(){
+ const opts=Object.values(CHARS).map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+ $('#p1').innerHTML=opts; $('#p2').innerHTML=opts; $('#p1').value='tsukune'; $('#p2').value='lowja';
+ $('#npcSelect').innerHTML=Object.entries(NPCS).map(([id,n])=>`<option value="${id}">${n.name}（${n.style}）</option>`).join('');
+ updateNpcMode(); preview();
+}
+function preview(){const a=CHARS[$('#p1').value],b=CHARS[$('#p2').value];$('#preview').innerHTML=charCard(a)+charCard(b)}
+function updateNpcMode(){const fixed=$('#npcMode').value==='fixed';$('#npcFixedBox').classList.toggle('hidden',!fixed);$('#npcModeHelp').textContent=fixed?'固定モード：指定したNPCデッキと対戦します。戦闘画面では敵の正体は伏せられます。':'ランダムモード：登録済みの固定NPCデッキから1組がランダムに選ばれます。敵の正体は特殊技能発動まで伏せられます。'}
+$('#p1').onchange=preview;$('#p2').onchange=preview;$('#npcMode').onchange=updateNpcMode;
+function makeDeck(ids){let deck=[];let seq=0;for(const id of ids){const c=CHARS[id];for(const [type,n] of Object.entries(c.commands)){for(let i=0;i<n;i++) deck.push({uid:`${id}_${type}_${seq++}`,unit:id,type});}}return deck}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function mkSide(ids,isEnemy=false){return {unitIds:ids,power:ids.reduce((s,id)=>s+CHARS[id].power,0),states:Object.fromEntries(ids.map(id=>[id,{sp:0,decisiveReady:false,revealed:!isEnemy}])),mods:{statMult:1,enemySchemeMult:1},powerRevealed:false,isEnemy}}
+function enemyKnown(id){return !!G?.enemy?.states?.[id]?.revealed}
+function enemyName(id){return enemyKnown(id)?CHARS[id].name:'？？？'}
+function revealEnemyUnit(id){if(G.enemy.states[id])G.enemy.states[id].revealed=true}
+function log(msg,cls=''){const d=document.createElement('div');d.className=cls;d.innerHTML=msg;$('#log').appendChild(d);$('#log').scrollTop=$('#log').scrollHeight}
+function setStageClass(kind=''){const s=$('#battleStage');s.classList.remove('skillScene','badScene','goodScene');if(kind==='skill')s.classList.add('skillScene');if(kind==='bad')s.classList.add('badScene');if(kind==='good')s.classList.add('goodScene')}
+function finishPendingStep(){if(logFlow.resolver){const r=logFlow.resolver;logFlow.resolver=null;r()}}
+async function battleStep(kicker,title,body,kind='',historyCls=''){
+  $('#battleStage').classList.remove('hidden');setStageClass(kind);$('#stageKicker').textContent=kicker;$('#stageTitle').textContent=title;$('#stageBody').innerHTML=body;
+  log(`<b>${kicker}｜${title}</b><br>${body}`,historyCls);
+  if(logFlow.skip)return;
+  if(logFlow.auto){await new Promise(r=>setTimeout(r,800));return}
+  await new Promise(r=>logFlow.resolver=r);
+}
+$('#nextLogBtn').onclick=e=>{e.stopPropagation();finishPendingStep()};
+$('#autoLogBtn').onclick=e=>{e.stopPropagation();logFlow.auto=!logFlow.auto;$('#autoLogBtn').textContent=logFlow.auto?'⏸ オート停止':'⏩ オート';if(logFlow.auto)finishPendingStep()};
+$('#skipLogBtn').onclick=e=>{e.stopPropagation();logFlow.skip=true;finishPendingStep()};
+$('#battleStage').onclick=e=>{if(e.target.closest('button'))return;finishPendingStep()};
+function start(){
+ if($('#p1').value===$('#p2').value){alert('同じユニットを2体選ぶことはできません。');return}
+ const mode=$('#npcMode').value;
+ const npcId=mode==='random'?Object.keys(NPCS)[Math.floor(Math.random()*Object.keys(NPCS).length)]:$('#npcSelect').value;
+ const npc=NPCS[npcId];
+ const deck=shuffle(makeDeck([$('#p1').value,$('#p2').value]));
+ logFlow={auto:false,skip:false,resolver:null};$('#autoLogBtn').textContent='⏩ オート';
+ G={turn:1,mode,npcId,player:mkSide([$('#p1').value,$('#p2').value],false),enemy:mkSide(npc.units,true),npc,deck,hand:deck.splice(0,8),selected:[],ended:false};
+ $('#setup').classList.add('hidden');$('#game').classList.remove('hidden');$('#resetBtn').classList.remove('hidden');$('#log').innerHTML='';
+ log(`対戦開始。敵部隊の正体は <b>？？？</b>。`,'sys');log(`自軍初期戦力：<b>${fmt(G.player.power)}</b>`,'good');render();startTimer();
+}
+$('#startBtn').onclick=start;$('#resetBtn').onclick=()=>location.reload();
+function effectiveStat(side,id,key){return CHARS[id][key]*side.mods.statMult}
+function unitStateHTML(side,id){const c=CHARS[id],s=side.states[id];if(side.isEnemy&&!s.revealed)return `<div class="unitstate"><b>？？？</b><br><span class="sp">準備 ${s.sp}</span>${s.decisiveReady?' / <span style="color:#ffd479">決戦準備</span>':''}<br><span class="small">武力 ??? / カリスマ ??? / 知略 ???</span></div>`;return `<div class="unitstate"><b>${c.name}</b><br><span class="sp">準備 ${s.sp}</span>${s.decisiveReady?' / <span style="color:#ffd479">決戦準備</span>':''}<br><span class="small">実効 武${fmt(effectiveStat(side,id,'power'))} / カ${fmt(effectiveStat(side,id,'charisma'))} / 知${fmt(effectiveStat(side,id,'intel'))}</span></div>`}
+function render(){
+ $('#turnNo').textContent=G.turn;$('#playerPower').textContent=fmt(G.player.power);$('#enemyPower').textContent=G.enemy.powerRevealed?fmt(G.enemy.power):'????';
+ $('#playerUnits').innerHTML=G.player.unitIds.map(id=>unitStateHTML(G.player,id)).join('');$('#enemyUnits').innerHTML=G.enemy.unitIds.map(id=>unitStateHTML(G.enemy,id)).join('');
+ $('#selection').innerHTML=[0,1,2,3].map(i=>G.selected[i]?`<div class="slot filled">${i+1}. ${CHARS[G.selected[i].unit].name}<br><b>${cmdName(G.selected[i].type)}</b></div>`:`<div class="slot">${i+1}. 未選択</div>`).join('');
+ $('#hand').innerHTML=G.hand.map((c,i)=>`<button class="card ${c.type}" data-i="${i}"><span class="num">${i+1}</span><div class="who">${CHARS[c.unit].name}</div><div class="cmd">${cmdName(c.type)}</div><div class="small">${cmdDetail(c)}</div></button>`).join('');
+ document.querySelectorAll('.card').forEach(b=>b.onclick=()=>selectCard(+b.dataset.i));$('#resolveBtn').disabled=G.selected.length!==4;$('#undoBtn').disabled=!G.selected.length;
+}
+function cmdName(t){return t==='recruit'?'招集':t==='scheme'?'策略':'準備'}
+function cmdDetail(c){const ch=CHARS[c.unit];if(c.type==='recruit')return `戦力 +${fmt(effectiveStat(G.player,c.unit,'charisma'))} / 策略防御`;if(c.type==='scheme')return `相手戦力 -${fmt(effectiveStat(G.player,c.unit,'intel'))}`;return `${ch.skill.name}へ準備 +1`}
+function selectCard(i){if(G.selected.length>=4)return;const c=G.hand.splice(i,1)[0];G.selected.push(c);render()}
+$('#undoBtn').onclick=()=>{if(!G.selected.length)return;G.hand.push(G.selected.pop());render()};
+$('#resolveBtn').onclick=()=>resolveTurn();
+function startTimer(){clearInterval(timerId);let t=30;$('#timer').textContent=t;timerId=setInterval(()=>{t--;$('#timer').textContent=t;if(t<=0){clearInterval(timerId);while(G.selected.length<4){if(G.hand.length)G.selected.push(G.hand.splice(Math.floor(Math.random()*G.hand.length),1)[0]);else G.selected.push({unit:null,type:'blank'})}render();resolveTurn()}},1000)}
+async function resolveTurn(){
+ clearInterval(timerId);$('#strategyPanel').classList.add('hidden');logFlow.skip=false;
+ await battleStep(`ターン${G.turn}`,'実働開始','選択した4枚のコマンドを順番に解決します。');
+ G.player.mods={statMult:1,enemySchemeMult:1};G.enemy.mods={statMult:1,enemySchemeMult:1};
+ const npcActions=G.npc.turns[G.turn-1].map((x,i)=>({uid:`npc_${G.turn}_${i}`,unit:x[0],type:x[1]}));
+ for(let i=0;i<4;i++){await resolvePair(G.selected[i],npcActions[i],i+1);if(G.ended)return}
+ await battleStep(`ターン${G.turn}`,'ターン終了',`自軍戦力 <b>${fmt(G.player.power)}</b>${G.enemy.powerRevealed?` / 敵軍戦力 <b>${fmt(G.enemy.power)}</b>`:' / 敵軍戦力 <b>????</b>'}`);
+ G.turn++;
+ if(G.turn===4){await finalBattle();return}
+ const draw=G.deck.splice(0,4);G.hand.push(...draw);G.selected=[];$('#battleStage').classList.add('hidden');$('#strategyPanel').classList.remove('hidden');render();startTimer();
+}
+async function prepStep(side,card,label){
+ if(!card||card.type!=='prepare'||!card.unit)return;const st=side.states[card.unit],ch=CHARS[card.unit],shown=side.isEnemy?enemyName(card.unit):ch.name;
+ if(st.decisiveReady){await battleStep('準備処理',`${label} ${shown}`,`すでに決戦準備状態のため、準備は<strong>失敗</strong>。`,'','sys');return}
+ st.sp++;render();await battleStep('準備処理',`${label} ${shown}`,`準備 +1 → <strong>${st.sp}</strong>`,'','sys');
+}
+async function triggeredSkills(side,label){
+ let out=[];for(const id of side.unitIds){const ch=CHARS[id],st=side.states[id];if(st.decisiveReady)continue;if(st.sp>=ch.skill.cost){st.sp=0;if(side.isEnemy)revealEnemyUnit(id);render();if(c<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>よくあるファンタジー世界のバトルゲーム 試供版</title>
+<style>
+:root{
+  --bg:#11151c; --panel:#1b2230; --panel2:#242e3f; --line:#3a465a;
+  --text:#eef2f7; --muted:#a9b4c4; --accent:#e6b85c; --danger:#e66a6a;
+  --ok:#76c893; --blue:#6ea8fe;
+}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(180deg,#0d1117,#161d29);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI","Noto Sans JP",sans-serif;min-height:100vh}
+button,select{font:inherit}
+.wrap{width:min(1100px,calc(100% - 24px));margin:18px auto 48px}
+header{display:flex;justify-content:space-between;gap:12px;align-items:flex-end;margin-bottom:16px}
+h1{font-size:clamp(22px,4vw,34px);margin:0}.sub{color:var(--muted);font-size:13px}
+.panel{background:rgba(27,34,48,.96);border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:0 8px 30px rgba(0,0,0,.2);margin-bottom:14px}
+.hidden{display:none!important}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+@media(max-width:760px){.grid2,.grid3{grid-template-columns:1fr}header{align-items:flex-start;flex-direction:column}}
+label{display:block;color:var(--muted);font-size:13px;margin:8px 0 6px}
+select{width:100%;padding:12px;background:#111722;color:var(--text);border:1px solid var(--line);border-radius:10px}
+.btn{border:0;border-radius:10px;padding:11px 16px;background:var(--accent);color:#1c1406;font-weight:800;cursor:pointer}.btn.secondary{background:#36445a;color:var(--text)}.btn.danger{background:#65363b;color:#fff}.btn:disabled{opacity:.45;cursor:not-allowed}
+.character{background:var(--panel2);border:1px solid var(--line);padding:12px;border-radius:12px}.character h3{margin:0 0 4px;font-size:17px}.tags{color:var(--muted);font-size:12px}.stats{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;font-size:13px}.skill{margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);font-size:13px;line-height:1.5}
+.topbar{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center}.badge{background:#101722;border:1px solid var(--line);padding:8px 11px;border-radius:999px;font-size:13px}.big{font-weight:900;font-size:20px}.enemyPower{letter-spacing:.18em}
+.unitrow{display:grid;grid-template-columns:1fr 1fr;gap:10px}.unitstate{background:#151c28;padding:10px;border-radius:10px;border:1px solid var(--line);font-size:13px}.sp{font-weight:800;color:var(--blue)}
+.hand{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:9px}.card{position:relative;text-align:left;padding:12px;border-radius:12px;border:1px solid var(--line);background:#20293a;color:var(--text);min-height:96px;cursor:pointer}.card:hover{border-color:#78879f}.card.selected{outline:2px solid var(--accent);background:#2d3440}.card .num{position:absolute;right:8px;top:7px;color:var(--muted);font-size:11px}.card .who{font-weight:800}.card .cmd{margin-top:6px;font-size:20px}.card.recruit .cmd{color:var(--ok)}.card.scheme .cmd{color:#ff8c8c}.card.prepare .cmd{color:var(--blue)}
+.selection{min-height:58px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}.slot{background:#111722;border:1px dashed var(--line);padding:9px 11px;border-radius:9px;font-size:13px}.slot.filled{border-style:solid}
+.battleStage{background:linear-gradient(180deg,#171e2b,#0f151f);border:1px solid var(--accent);border-radius:14px;padding:18px;margin-bottom:12px;min-height:190px;display:flex;flex-direction:column;justify-content:space-between;cursor:pointer;box-shadow:0 0 0 1px rgba(230,184,92,.12) inset}.battleStage.skillScene{border-color:#ffd479;background:linear-gradient(180deg,#2b2418,#14120e)}.battleStage.badScene{border-color:#e66a6a}.battleStage.goodScene{border-color:#76c893}.stageKicker{color:var(--muted);font-size:12px;letter-spacing:.08em}.stageTitle{font-size:clamp(20px,5vw,30px);font-weight:900;margin:8px 0}.stageBody{font-size:16px;line-height:1.75}.stageControls{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}.stageControls .btn{flex:1;min-width:110px}.logTitle{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:14px 0 8px}.log{height:250px;overflow:auto;background:#0d131d;border:1px solid var(--line);border-radius:12px;padding:12px;font-size:13px;line-height:1.65}.log .sys{color:var(--muted)}.log .good{color:#91d5a7}.log .bad{color:#ff9696}.log .skilllog{color:#ffd479;font-weight:800}.log .cutin{margin:8px 0;padding:10px;border-left:4px solid var(--accent);background:#241f18;font-weight:800}
+.result{text-align:center;padding:26px}.result h2{font-size:34px;margin:0 0 10px}.win{color:#8ddeaa}.lose{color:#ff8e8e}.draw{color:#ddd}
+.small{font-size:12px;color:var(--muted)}.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.spacer{flex:1}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header><div><h1>よくあるファンタジー世界のバトルゲーム</h1><div class="sub">NPC戦 試供版 v0.3</div></div><button id="resetBtn" class="btn secondary hidden">最初から</button></header>
+
+<section id="setup" class="panel">
+  <h2>部隊編成</h2>
+  <p class="small">自分のユニットを必ず2体選択してください。同じユニットは選べません。</p>
+  <div class="grid2">
+    <div><label>自軍ユニットA</label><select id="p1"></select></div>
+    <div><label>自軍ユニットB</label><select id="p2"></select></div>
+  </div>
+  <div class="grid2">
+    <div>
+      <label>NPC戦モード</label>
+      <select id="npcMode">
+        <option value="random">ランダムモード（固定NPCデッキからランダム）</option>
+        <option value="fixed">固定モード（練習用）</option>
+      </select>
+    </div>
+    <div id="npcFixedBox" class="hidden">
+      <label>固定NPCデッキ</label>
+      <select id="npcSelect"></select>
+    </div>
+  </div>
+  <p id="npcModeHelp" class="small">ランダムモードでは登録済みの固定NPCデッキから1組が選ばれます。対戦開始後、敵の正体は伏せられます。</p>
+  <div id="preview" class="grid2" style="margin-top:14px"></div>
+  <div style="margin-top:14px"><button id="startBtn" class="btn">対戦開始</button></div>
+</section>
+
+<section id="game" class="hidden">
+  <div class="panel topbar">
+    <div class="badge">ターン <span id="turnNo" class="big">1</span> / 3</div>
+    <div class="badge">自軍戦力 <span id="playerPower" class="big">0</span></div>
+    <div class="badge">敵戦力 <span id="enemyPower" class="big enemyPower">????</span></div>
+    <div class="badge">選択残り <span id="timer" class="big">30</span>秒</div>
+  </div>
+  <div class="grid2">
+    <div class="panel"><h3>自軍</h3><div id="playerUnits" class="unitrow"></div></div>
+    <div class="panel"><h3>敵軍</h3><div id="enemyUnits" class="unitrow"></div></div>
+  </div>
+  <div id="strategyPanel" class="panel">
+    <div class="row"><h3 style="margin:0">戦略フェイズ</h3><span class="small">手札から4枚を使用順に選択</span><span class="spacer"></span><button id="undoBtn" class="btn secondary">1枚戻す</button></div>
+    <div id="selection" class="selection" style="margin:10px 0"></div>
+    <div id="hand" class="hand"></div>
+    <div style="margin-top:12px"><button id="resolveBtn" class="btn" disabled>4枚を決定</button></div>
+  </div>
+  <div class="panel"><h3>戦闘</h3>
+    <div id="battleStage" class="battleStage hidden">
+      <div><div id="stageKicker" class="stageKicker">実働フェイズ</div><div id="stageTitle" class="stageTitle">コマンド公開</div><div id="stageBody" class="stageBody"></div></div>
+      <div class="stageControls">
+        <button id="nextLogBtn" class="btn">▶ 次へ</button>
+        <button id="autoLogBtn" class="btn secondary">⏩ オート</button>
+        <button id="skipLogBtn" class="btn secondary">⏭ 一気に最後まで</button>
+      </div>
+    </div>
+    <div class="logTitle"><b>戦闘履歴</b><span class="small">上の演出を進めても履歴は残ります</span></div>
+    <div id="log" class="log"></div>
+  </div>
+</section>
+
+<section id="result" class="panel result hidden"></section>
+</div>
+<script>
+const CHARS = {
+ tsukune:{id:'tsukune',name:'騎兵隊長・ツクネ',role:'英雄',race:'騎士♀',rarity:2,power:1020,charisma:400,intel:350,skill:{id:'cavalry',name:'騎兵決戦',cost:1,type:'decisive',text:'決戦スキル・自分の戦力を1.3倍する'},commands:{recruit:4,scheme:3,prepare:1}},
+ lowja:{id:'lowja',name:'ハイエルフ・ロウジャ',role:'策士',race:'エルフ♀',rarity:2,power:800,charisma:350,intel:450,skill:{id:'guerrilla',name:'ゲリラ戦術',cost:2,type:'normal',text:'相手の戦力を知略の2.0倍減少'},commands:{recruit:1,scheme:5,prepare:2}},
+ bonret:{id:'bonret',name:'天才詩人・ボンレット',role:'扇動者',race:'民間人♂',rarity:2,power:780,charisma:420,intel:380,skill:{id:'star',name:'主役抜擢',cost:2,type:'normal',text:'両ユニットのカリスマ合計値の1.2倍戦力増加'},commands:{recruit:3,scheme:3,prepare:2}},
+ guren:{id:'guren',name:'炎の魔術師・紅蓮',role:'武勇',race:'魔術師♂',rarity:2,power:880,charisma:440,intel:550,skill:{id:'te_golem',name:'T・E・ゴーレム',cost:1,type:'normal',text:'このターン中、相手の策略倍率は0.5倍'},commands:{recruit:3,scheme:2,prepare:3}},
+ crow:{id:'crow',name:'キャプテン・C・クロウ',role:'策士',race:'斥候♂',rarity:2,power:560,charisma:500,intel:480,skill:{id:'p_commander',name:'Pコマンダー',cost:2,type:'normal',text:'このターン、自分の両ユニットのステータス1.5倍'},commands:{recruit:2,scheme:3,prepare:3}},
+ ggg:{id:'ggg',name:'GGGゴーレム',role:'英雄',race:'機械♀',rarity:2,power:1500,charisma:0,intel:500,skill:{id:'laser',name:'レーザービーム',cost:4,type:'normal',text:'相手戦力-1500、相手の準備1以上の全ユニットを0'},commands:{recruit:0,scheme:3,prepare:5}},
+ jackeen:{id:'jackeen',name:'暗殺者（笑）・ジャキーン',role:'武勇',race:'斥候♂',rarity:2,power:960,charisma:400,intel:370,skill:{id:'recon',name:'威力偵察',cost:2,type:'normal',text:'相手の現在戦力を公開し、武力1.0倍分減少'},commands:{recruit:3,scheme:2,prepare:3}}
+};
+const NPCS = {
+ crow_bonret:{name:'クロウ＋ボンレット',style:'後半爆発型',units:['crow','bonret'],turns:[
+  [['bonret','recruit'],['bonret','recruit'],['bonret','recruit'],['crow','scheme']],
+  [['crow','prepare'],['crow','scheme'],['crow','scheme'],['bonret','prepare']],
+  [['crow','prepare'],['bonret','prepare'],['crow','recruit'],['crow','recruit']]
+ ]},
+ guren_lowja:{name:'紅蓮＋ロウジャ',style:'妨害型',units:['guren','lowja'],turns:[
+  [['guren','prepare'],['lowja','scheme'],['guren','recruit'],['lowja','prepare']],
+  [['lowja','prepare'],['guren','prepare'],['guren','recruit'],['lowja','scheme']],
+  [['guren','prepare'],['guren','scheme'],['guren','scheme'],['lowja','scheme']]
+ ]},
+ ggg_lowja:{name:'GGG＋ロウジャ',style:'準備破壊型',units:['ggg','lowja'],turns:[
+  [['ggg','prepare'],['lowja','prepare'],['ggg','prepare'],['ggg','prepare']],
+  [['ggg','scheme'],['ggg','scheme'],['ggg','scheme'],['lowja','scheme']],
+  [['lowja','scheme'],['lowja','scheme'],['ggg','prepare'],['lowja','prepare']]
+ ]},
+ tsukune_jackeen:{name:'ツクネ＋ジャキーン',style:'決戦型',units:['tsukune','jackeen'],turns:[
+  [['tsukune','recruit'],['tsukune','recruit'],['tsukune','recruit'],['tsukune','recruit']],
+  [['tsukune','prepare'],['tsukune','recruit'],['tsukune','recruit'],['tsukune','recruit']],
+  [['jackeen','prepare'],['jackeen','prepare'],['jackeen','scheme'],['tsukune','scheme']]
+ ]},
+ crow_jackeen:{name:'クロウ＋ジャキーン',style:'強化偵察型',units:['crow','jackeen'],turns:[
+  [['crow','scheme'],['crow','scheme'],['crow','scheme'],['jackeen','prepare']],
+  [['crow','prepare'],['jackeen','recruit'],['jackeen','recruit'],['jackeen','recruit']],
+  [['crow','prepare'],['jackeen','prepare'],['crow','recruit'],['crow','recruit']]
+ ]},
+ ggg_guren:{name:'GGG＋紅蓮',style:'レーザー妨害型',units:['ggg','guren'],turns:[
+  [['guren','prepare'],['ggg','scheme'],['ggg','scheme'],['ggg','scheme']],
+  [['guren','prepare'],['ggg','prepare'],['ggg','prepare'],['ggg','prepare']],
+  [['ggg','prepare'],['guren','prepare'],['guren','scheme'],['guren','scheme']]
+ ]}
+};
+let G=null, timerId=null;
+let logFlow={auto:false,skip:false,resolver:null};
+const $=s=>document.querySelector(s);
+function fmt(n){return Math.floor(n).toLocaleString('ja-JP')}
+function charCard(c){return `<div class="character"><h3>${c.name}</h3><div class="tags">${c.role} / ${c.race} / ★${c.rarity}</div><div class="stats"><b>武力 ${c.power}</b><b>カリスマ ${c.charisma}</b><b>知略 ${c.intel}</b></div><div class="skill"><b>${c.skill.name}</b>　準備${c.skill.cost}<br>${c.skill.text}</div></div>`}
+function initSetup(){
+ const opts=Object.values(CHARS).map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+ $('#p1').innerHTML=opts; $('#p2').innerHTML=opts; $('#p1').value='tsukune'; $('#p2').value='lowja';
+ $('#npcSelect').innerHTML=Object.entries(NPCS).map(([id,n])=>`<option value="${id}">${n.name}（${n.style}）</option>`).join('');
+ updateNpcMode(); preview();
+}
+function preview(){const a=CHARS[$('#p1').value],b=CHARS[$('#p2').value];$('#preview').innerHTML=charCard(a)+charCard(b)}
+function updateNpcMode(){const fixed=$('#npcMode').value==='fixed';$('#npcFixedBox').classList.toggle('hidden',!fixed);$('#npcModeHelp').textContent=fixed?'固定モード：指定したNPCデッキと対戦します。戦闘画面では敵の正体は伏せられます。':'ランダムモード：登録済みの固定NPCデッキから1組がランダムに選ばれます。敵の正体は特殊技能発動まで伏せられます。'}
+$('#p1').onchange=preview;$('#p2').onchange=preview;$('#npcMode').onchange=updateNpcMode;
+function makeDeck(ids){let deck=[];let seq=0;for(const id of ids){const c=CHARS[id];for(const [type,n] of Object.entries(c.commands)){for(let i=0;i<n;i++) deck.push({uid:`${id}_${type}_${seq++}`,unit:id,type});}}return deck}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function mkSide(ids,isEnemy=false){return {unitIds:ids,power:ids.reduce((s,id)=>s+CHARS[id].power,0),states:Object.fromEntries(ids.map(id=>[id,{sp:0,decisiveReady:false,revealed:!isEnemy}])),mods:{statMult:1,enemySchemeMult:1},powerRevealed:false,isEnemy}}
+function enemyKnown(id){return !!G?.enemy?.states?.[id]?.revealed}
+function enemyName(id){return enemyKnown(id)?CHARS[id].name:'？？？'}
+function revealEnemyUnit(id){if(G.enemy.states[id])G.enemy.states[id].revealed=true}
+function log(msg,cls=''){const d=document.createElement('div');d.className=cls;d.innerHTML=msg;$('#log').appendChild(d);$('#log').scrollTop=$('#log').scrollHeight}
+function setStageClass(kind=''){const s=$('#battleStage');s.classList.remove('skillScene','badScene','goodScene');if(kind==='skill')s.classList.add('skillScene');if(kind==='bad')s.classList.add('badScene');if(kind==='good')s.classList.add('goodScene')}
+function finishPendingStep(){if(logFlow.resolver){const r=logFlow.resolver;logFlow.resolver=null;r()}}
+async function battleStep(kicker,title,body,kind='',historyCls=''){
+  $('#battleStage').classList.remove('hidden');setStageClass(kind);$('#stageKicker').textContent=kicker;$('#stageTitle').textContent=title;$('#stageBody').innerHTML=body;
+  log(`<b>${kicker}｜${title}</b><br>${body}`,historyCls);
+  if(logFlow.skip)return;
+  if(logFlow.auto){await new Promise(r=>setTimeout(r,800));return}
+  await new Promise(r=>logFlow.resolver=r);
+}
+$('#nextLogBtn').onclick=e=>{e.stopPropagation();finishPendingStep()};
+$('#autoLogBtn').onclick=e=>{e.stopPropagation();logFlow.auto=!logFlow.auto;$('#autoLogBtn').textContent=logFlow.auto?'⏸ オート停止':'⏩ オート';if(logFlow.auto)finishPendingStep()};
+$('#skipLogBtn').onclick=e=>{e.stopPropagation();logFlow.skip=true;finishPendingStep()};
+$('#battleStage').onclick=e=>{if(e.target.closest('button'))return;finishPendingStep()};
+function start(){
+ if($('#p1').value===$('#p2').value){alert('同じユニットを2体選ぶことはできません。');return}
+ const mode=$('#npcMode').value;
+ const npcId=mode==='random'?Object.keys(NPCS)[Math.floor(Math.random()*Object.keys(NPCS).length)]:$('#npcSelect').value;
+ const npc=NPCS[npcId];
+ const deck=shuffle(makeDeck([$('#p1').value,$('#p2').value]));
+ logFlow={auto:false,skip:false,resolver:null};$('#autoLogBtn').textContent='⏩ オート';
+ G={turn:1,mode,npcId,player:mkSide([$('#p1').value,$('#p2').value],false),enemy:mkSide(npc.units,true),npc,deck,hand:deck.splice(0,8),selected:[],ended:false};
+ $('#setup').classList.add('hidden');$('#game').classList.remove('hidden');$('#resetBtn').classList.remove('hidden');$('#log').innerHTML='';
+ log(`対戦開始。敵部隊の正体は <b>？？？</b>。`,'sys');log(`自軍初期戦力：<b>${fmt(G.player.power)}</b>`,'good');render();startTimer();
+}
+$('#startBtn').onclick=start;$('#resetBtn').onclick=()=>location.reload();
+function effectiveStat(side,id,key){return CHARS[id][key]*side.mods.statMult}
+function unitStateHTML(side,id){const c=CHARS[id],s=side.states[id];if(side.isEnemy&&!s.revealed)return `<div class="unitstate"><b>？？？</b><br><span class="sp">準備 ${s.sp}</span>${s.decisiveReady?' / <span style="color:#ffd479">決戦準備</span>':''}<br><span class="small">武力 ??? / カリスマ ??? / 知略 ???</span></div>`;return `<div class="unitstate"><b>${c.name}</b><br><span class="sp">準備 ${s.sp}</span>${s.decisiveReady?' / <span style="color:#ffd479">決戦準備</span>':''}<br><span class="small">実効 武${fmt(effectiveStat(side,id,'power'))} / カ${fmt(effectiveStat(side,id,'charisma'))} / 知${fmt(effectiveStat(side,id,'intel'))}</span></div>`}
+function render(){
+ $('#turnNo').textContent=G.turn;$('#playerPower').textContent=fmt(G.player.power);$('#enemyPower').textContent=G.enemy.powerRevealed?fmt(G.enemy.power):'????';
+ $('#playerUnits').innerHTML=G.player.unitIds.map(id=>unitStateHTML(G.player,id)).join('');$('#enemyUnits').innerHTML=G.enemy.unitIds.map(id=>unitStateHTML(G.enemy,id)).join('');
+ $('#selection').innerHTML=[0,1,2,3].map(i=>G.selected[i]?`<div class="slot filled">${i+1}. ${CHARS[G.selected[i].unit].name}<br><b>${cmdName(G.selected[i].type)}</b></div>`:`<div class="slot">${i+1}. 未選択</div>`).join('');
+ $('#hand').innerHTML=G.hand.map((c,i)=>`<button class="card ${c.type}" data-i="${i}"><span class="num">${i+1}</span><div class="who">${CHARS[c.unit].name}</div><div class="cmd">${cmdName(c.type)}</div><div class="small">${cmdDetail(c)}</div></button>`).join('');
+ document.querySelectorAll('.card').forEach(b=>b.onclick=()=>selectCard(+b.dataset.i));$('#resolveBtn').disabled=G.selected.length!==4;$('#undoBtn').disabled=!G.selected.length;
+}
+function cmdName(t){return t==='recruit'?'招集':t==='scheme'?'策略':'準備'}
+function cmdDetail(c){const ch=CHARS[c.unit];if(c.type==='recruit')return `戦力 +${fmt(effectiveStat(G.player,c.unit,'charisma'))} / 策略防御`;if(c.type==='scheme')return `相手戦力 -${fmt(effectiveStat(G.player,c.unit,'intel'))}`;return `${ch.skill.name}へ準備 +1`}
+function selectCard(i){if(G.selected.length>=4)return;const c=G.hand.splice(i,1)[0];G.selected.push(c);render()}
+$('#undoBtn').onclick=()=>{if(!G.selected.length)return;G.hand.push(G.selected.pop());render()};
+$('#resolveBtn').onclick=()=>resolveTurn();
+function startTimer(){clearInterval(timerId);let t=30;$('#timer').textContent=t;timerId=setInterval(()=>{t--;$('#timer').textContent=t;if(t<=0){clearInterval(timerId);while(G.selected.length<4){if(G.hand.length)G.selected.push(G.hand.splice(Math.floor(Math.random()*G.hand.length),1)[0]);else G.selected.push({unit:null,type:'blank'})}render();resolveTurn()}},1000)}
+async function resolveTurn(){
+ clearInterval(timerId);$('#strategyPanel').classList.add('hidden');logFlow.skip=false;
+ await battleStep(`ターン${G.turn}`,'実働開始','選択した4枚のコマンドを順番に解決します。');
+ G.player.mods={statMult:1,enemySchemeMult:1};G.enemy.mods={statMult:1,enemySchemeMult:1};
+ const npcActions=G.npc.turns[G.turn-1].map((x,i)=>({uid:`npc_${G.turn}_${i}`,unit:x[0],type:x[1]}));
+ for(let i=0;i<4;i++){await resolvePair(G.selected[i],npcActions[i],i+1);if(G.ended)return}
+ await battleStep(`ターン${G.turn}`,'ターン終了',`自軍戦力 <b>${fmt(G.player.power)}</b>${G.enemy.powerRevealed?` / 敵軍戦力 <b>${fmt(G.enemy.power)}</b>`:' / 敵軍戦力 <b>????</b>'}`);
+ G.turn++;
+ if(G.turn===4){await finalBattle();return}
+ const draw=G.deck.splice(0,4);G.hand.push(...draw);G.selected=[];$('#battleStage').classList.add('hidden');$('#strategyPanel').classList.remove('hidden');render();startTimer();
+}
+async function prepStep(side,card,label){
+ if(!card||card.type!=='prepare'||!card.unit)return;const st=side.states[card.unit],ch=CHARS[card.unit],shown=side.isEnemy?enemyName(card.unit):ch.name;
+ if(st.decisiveReady){await battleStep('準備処理',`${label} ${shown}`,`すでに決戦準備状態のため、準備は<strong>失敗</strong>。`,'','sys');return}
+ st.sp++;render();await battleStep('準備処理',`${label} ${shown}`,`準備 +1 → <strong>${st.sp}</strong>`,'','sys');
+}
+async function triggeredSkills(side,label){
+ let out=[];for(const id of side.unitIds){const ch=CHARS[id],st=side.states[id];if(st.decisiveReady)continue;if(st.sp>=ch.skill.cost){st.sp=0;if(side.isEnemy)revealEnemyUnit(id);render();if(c ]}
 };
 let G=null, timerId=null;
 let logFlow={auto:false,skip:false,resolver:null};
