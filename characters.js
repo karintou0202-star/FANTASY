@@ -75,7 +75,7 @@ const CHARS = {
       name:'T・E・ゴーレム',
       cost:1,
       type:'normal',
-      text:'このターン中、相手の策略倍率は0.5倍'
+      text:'このターン中、相手の招集の戦力増加倍率が0.5倍になる。この効果は重複しない'
     },
     commands:{recruit:3,scheme:2,prepare:3}
   },
