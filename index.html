@@ -226,7 +226,7 @@ function mkSide(ids,isEnemy=false){
     states:Object.fromEntries(ids.map(id=>[
       id,{sp:0,decisiveReady:false,revealed:!isEnemy}
     ])),
-    mods:{statMult:1,enemySchemeMult:1},
+    mods:{statMult:1,enemySchemeMult:1,recruitMult:1},
     powerRevealed:false,
     isEnemy
   };
@@ -411,7 +411,7 @@ function cmdName(t){
 
 function cmdDetail(c){
   const ch=CHARS[c.unit];
-  if(c.type==='recruit')return `戦力 +${fmt(effectiveStat(G.player,c.unit,'charisma'))} / 策略防御`;
+  if(c.type==='recruit')return `戦力 +${fmt(effectiveStat(G.player,c.unit,'charisma')*G.player.mods.recruitMult)} / 策略防御`;
   if(c.type==='scheme')return `相手戦力 -${fmt(effectiveStat(G.player,c.unit,'intel'))}`;
   return `${ch.skill.name}へ準備 +1`;
 }
@@ -462,8 +462,8 @@ async function resolveTurn(){
 
   await battleStep(`ターン${G.turn}`,'実働開始','選択した4枚のコマンドを順番に解決します。');
 
-  G.player.mods={statMult:1,enemySchemeMult:1};
-  G.enemy.mods={statMult:1,enemySchemeMult:1};
+  G.player.mods={statMult:1,enemySchemeMult:1,recruitMult:1};
+  G.enemy.mods={statMult:1,enemySchemeMult:1,recruitMult:1};
 
   const npcActions=G.npc.turns[G.turn-1].map((x,i)=>({
     uid:`npc_${G.turn}_${i}`,
@@ -589,8 +589,8 @@ async function applySkill(side,opp,id,label){
     }
 
     case 'te_golem':
-      opp.mods.enemySchemeMult=0.5;
-      body='このターン中、相手の策略倍率を <strong>0.5倍</strong> にする。';
+      opp.mods.recruitMult=0.5;
+      body='このターン中、相手の招集による戦力増加倍率を <strong>0.5倍</strong> にする。この効果は重複しない。';
       break;
 
     case 'p_commander':
@@ -655,7 +655,7 @@ async function resolvePair(pc,ec,n){
   const eRecruit=ec.type==='recruit';
 
   if(pRecruit){
-    const v=effectiveStat(G.player,pc.unit,'charisma');
+    const v=effectiveStat(G.player,pc.unit,'charisma')*G.player.mods.recruitMult;
     G.player.power+=v;
     render();
 
@@ -669,7 +669,7 @@ async function resolvePair(pc,ec,n){
   }
 
   if(eRecruit){
-    const v=effectiveStat(G.enemy,ec.unit,'charisma');
+    const v=effectiveStat(G.enemy,ec.unit,'charisma')*G.enemy.mods.recruitMult;
     G.enemy.power+=v;
     render();
 
