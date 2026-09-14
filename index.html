@@ -54,6 +54,7 @@ select{width:100%;padding:12px;background:#111722;color:var(--text);border:1px s
 .result{text-align:center;padding:26px}.result h2{font-size:34px;margin:0 0 10px}
 .win{color:#8ddeaa}.lose{color:#ff8e8e}.draw{color:#ddd}
 .small{font-size:12px;color:var(--muted)}.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.spacer{flex:1}
+.streak{border-color:var(--accent);color:#ffe0a3}.streak .big{margin-left:4px}
 </style>
 </head>
 <body>
@@ -61,7 +62,7 @@ select{width:100%;padding:12px;background:#111722;color:var(--text);border:1px s
 <header>
   <div>
     <h1>よくあるファンタジー世界のバトルゲーム</h1>
-    <div class="sub">NPC戦 試供版 v0.3・データ分離版</div>
+    <div class="sub">NPC戦 試供版 v0.4・連戦モード搭載</div>
   </div>
   <button id="resetBtn" class="btn secondary hidden">最初から</button>
 </header>
@@ -78,6 +79,7 @@ select{width:100%;padding:12px;background:#111722;color:var(--text);border:1px s
       <label>NPC戦モード</label>
       <select id="npcMode">
         <option value="random">ランダムモード（固定NPCデッキからランダム）</option>
+        <option value="streak">連戦モード（敗北するまでランダム対戦）</option>
         <option value="fixed">固定モード（練習用）</option>
       </select>
     </div>
@@ -94,6 +96,7 @@ select{width:100%;padding:12px;background:#111722;color:var(--text);border:1px s
 <section id="game" class="hidden">
   <div class="panel topbar">
     <div class="badge">ターン <span id="turnNo" class="big">1</span> / 3</div>
+    <div id="streakBadge" class="badge streak hidden">連勝 <span id="streakCount" class="big">0</span></div>
     <div class="badge">自軍戦力 <span id="playerPower" class="big">0</span></div>
     <div class="badge">敵戦力 <span id="enemyPower" class="big enemyPower">????</span></div>
     <div class="badge">選択残り <span id="timer" class="big">30</span>秒</div>
@@ -181,11 +184,14 @@ function preview(){
 }
 
 function updateNpcMode(){
-  const fixed=$('#npcMode').value==='fixed';
+  const mode=$('#npcMode').value;
+  const fixed=mode==='fixed';
   $('#npcFixedBox').classList.toggle('hidden',!fixed);
-  $('#npcModeHelp').textContent=fixed
+  $('#npcModeHelp').textContent=mode==='fixed'
     ?'固定モード：指定したNPCデッキと対戦します。戦闘画面では敵の正体は伏せられます。'
-    :'ランダムモード：登録済みの固定NPCデッキから1組がランダムに選ばれます。敵の正体は特殊技能発動まで伏せられます。';
+    :mode==='streak'
+      ?'連戦モード：同じ部隊でランダムなNPCと敗北するまで戦います。勝利するたび連勝数が増えます。'
+      :'ランダムモード：登録済みの固定NPCデッキから1組がランダムに選ばれます。敵の正体は特殊技能発動まで伏せられます。';
 }
 
 $('#p1').onchange=preview;
@@ -280,6 +286,12 @@ $('#autoLogBtn').onclick=e=>{
 $('#skipLogBtn').onclick=e=>{e.stopPropagation();logFlow.skip=true;finishPendingStep()};
 $('#battleStage').onclick=e=>{if(e.target.closest('button'))return;finishPendingStep()};
 
+function randomNpcId(excludeId=null){
+  const ids=Object.keys(NPCS);
+  const choices=ids.length>1?ids.filter(id=>id!==excludeId):ids;
+  return choices[Math.floor(Math.random()*choices.length)];
+}
+
 function start(){
   if($('#p1').value===$('#p2').value){
     alert('同じユニットを2体選ぶことはできません。');
@@ -287,13 +299,19 @@ function start(){
   }
 
   const mode=$('#npcMode').value;
-  const npcIds=Object.keys(NPCS);
-  const npcId=mode==='random'
-    ?npcIds[Math.floor(Math.random()*npcIds.length)]
-    :$('#npcSelect').value;
+  const npcId=mode==='fixed'?$('#npcSelect').value:randomNpcId();
+  const run=mode==='streak'
+    ?{wins:0,lastNpcId:null,playerUnits:[$('#p1').value,$('#p2').value]}
+    :null;
+
+  startMatch(mode,npcId,run);
+}
+
+function startMatch(mode,npcId,run=null){
+  const playerUnits=run?.playerUnits||[$('#p1').value,$('#p2').value];
 
   const npc=NPCS[npcId];
-  const deck=shuffle(makeDeck([$('#p1').value,$('#p2').value]));
+  const deck=shuffle(makeDeck(playerUnits));
 
   logFlow={auto:false,skip:false,resolver:null};
   $('#autoLogBtn').textContent='⏩ オート';
@@ -301,8 +319,9 @@ function start(){
   G={
     turn:1,
     mode,
+    run,
     npcId,
-    player:mkSide([$('#p1').value,$('#p2').value],false),
+    player:mkSide(playerUnits,false),
     enemy:mkSide(npc.units,true),
     npc,
     deck,
@@ -312,11 +331,16 @@ function start(){
   };
 
   $('#setup').classList.add('hidden');
+  $('#result').classList.add('hidden');
   $('#game').classList.remove('hidden');
   $('#resetBtn').classList.remove('hidden');
   $('#log').innerHTML='';
+  $('#battleStage').classList.add('hidden');
+  $('#strategyPanel').classList.remove('hidden');
+  $('#streakBadge').classList.toggle('hidden',mode!=='streak');
+  $('#streakCount').textContent=run?.wins||0;
 
-  log(`対戦開始。敵部隊の正体は <b>？？？</b>。`,'sys');
+  log(`${mode==='streak'?`連戦 ${run.wins+1}戦目。`:''}対戦開始。敵部隊の正体は <b>？？？</b>。`,'sys');
   log(`自軍初期戦力：<b>${fmt(G.player.power)}</b>`,'good');
   render();
   startTimer();
@@ -828,6 +852,32 @@ function showResult(title,cls,msg){
   r.classList.remove('hidden');
 
   const enemy=G.npc.units.map(id=>CHARS[id].name).join(' ＋ ');
+
+  if(G.mode==='streak'){
+    if(cls==='win')G.run.wins++;
+    G.run.lastNpcId=G.npcId;
+
+    const canContinue=cls!=='lose';
+    r.innerHTML=`
+      <h2 class="${cls}">${title}</h2>
+      <p>${msg}</p>
+      <p class="big">現在 <span class="${canContinue?'win':'lose'}">${G.run.wins}連勝</span></p>
+      <p class="small">今回の敵部隊：<b>${enemy}</b></p>
+      ${canContinue
+        ?'<button id="nextStreakBtn" class="btn">次の対戦へ</button>'
+        :'<p>連戦終了。今回の記録は <b>'+G.run.wins+'勝</b>でした。</p>'}
+      <button id="backSetupBtn" class="btn secondary">部隊編成へ戻る</button>
+    `;
+
+    $('#backSetupBtn').onclick=()=>location.reload();
+    if(canContinue){
+      $('#nextStreakBtn').onclick=()=>{
+        const nextId=randomNpcId(G.run.lastNpcId);
+        startMatch('streak',nextId,G.run);
+      };
+    }
+    return;
+  }
 
   r.innerHTML=`
     <h2 class="${cls}">${title}</h2>
