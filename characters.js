@@ -108,13 +108,13 @@ const CHARS = {
     rarity:2,
     power:1500,
     charisma:0,
-    intel:500,
+    intel:550,
     skill:{
       id:'laser',
       name:'レーザービーム',
       cost:4,
       type:'normal',
-      text:'相手戦力-1500、相手の準備1以上の全ユニットを0'
+      text:'相手戦力-2000、相手の準備1以上の全ユニットを0'
     },
     commands:{recruit:0,scheme:3,prepare:5}
   },
