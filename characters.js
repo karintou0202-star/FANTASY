@@ -18,6 +18,7 @@ const CHARS = {
       name:'騎兵決戦',
       cost:1,
       type:'decisive',
+      multiplier:1.3,
       text:'決戦スキル・自分の戦力を1.3倍する'
     },
     commands:{recruit:4,scheme:3,prepare:1}
@@ -135,5 +136,44 @@ const CHARS = {
       text:'相手の現在戦力を公開し、武力1.0倍分減少'
     },
     commands:{recruit:3,scheme:2,prepare:3}
+  },
+
+  zazan:{
+    id:'zazan',
+    name:'闇剣士・ザザン',
+    role:'英雄',
+    race:'魔族♂',
+    rarity:2,
+    power:800,
+    charisma:450,
+    intel:400,
+    skill:{
+      id:'magic_sword',
+      name:'魔剣',
+      cost:3,
+      type:'decisive',
+      multiplier:1.7,
+      text:'決戦スキル・自分の戦力を1.7倍する'
+    },
+    commands:{recruit:2,scheme:2,prepare:4}
+  },
+
+  larin:{
+    id:'larin',
+    name:'縛術士・ラーリン',
+    role:'策士',
+    race:'エルフ♀',
+    rarity:2,
+    power:670,
+    charisma:380,
+    intel:480,
+    skill:{
+      id:'binding_rope',
+      name:'縛り紐',
+      cost:2,
+      type:'normal',
+      text:'相手のすべてのユニットのステータスを0.8倍にする'
+    },
+    commands:{recruit:2,scheme:4,prepare:2}
   }
 };
