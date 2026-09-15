@@ -175,5 +175,44 @@ const CHARS = {
       text:'相手のすべてのユニットのステータスを0.8倍にする'
     },
     commands:{recruit:2,scheme:4,prepare:2}
+  },
+
+  vanilla:{
+    id:'vanilla',
+    name:'闘拳士・バニラ',
+    role:'武勇',
+    race:'民間人♂',
+    rarity:1,
+    power:800,
+    charisma:400,
+    intel:400,
+    skill:{
+      id:'vanilla_fist',
+      name:'バニラ神拳',
+      cost:2,
+      type:'normal',
+      text:'戦力を800増加させる'
+    },
+    commands:{recruit:3,scheme:3,prepare:2}
+  },
+
+  vanilla_clone:{
+    id:'vanilla_clone',
+    name:'闘拳士・バニラ',
+    role:'武勇',
+    race:'民間人♂',
+    rarity:1,
+    power:800,
+    charisma:400,
+    intel:400,
+    selectable:false,
+    skill:{
+      id:'vanilla_fist',
+      name:'バニラ神拳',
+      cost:2,
+      type:'normal',
+      text:'戦力を800増加させる'
+    },
+    commands:{recruit:3,scheme:3,prepare:2}
   }
 };
