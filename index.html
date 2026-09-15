@@ -152,9 +152,9 @@ const $=s=>document.querySelector(s);
 
 function fmt(n){return Math.floor(n).toLocaleString('ja-JP')}
 
-function charCard(c){
+function charCard(c,displayName=c.name){
   return `<div class="character">
-    <h3>${c.name}</h3>
+    <h3>${displayName}</h3>
     <div class="tags">${c.role} / ${c.race} / ★${c.rarity}</div>
     <div class="stats">
       <b>武力 ${c.power}</b><b>カリスマ ${c.charisma}</b><b>知略 ${c.intel}</b>
@@ -182,7 +182,10 @@ function initSetup(){
 
 function preview(){
   const a=CHARS[$('#p1').value],b=CHARS[$('#p2').value];
-  $('#preview').innerHTML=charCard(a)+charCard(b);
+  const duplicate=a.name===b.name;
+  $('#preview').innerHTML=
+    charCard(a,duplicate?`${a.name}A`:a.name)+
+    charCard(b,duplicate?`${b.name}B`:b.name);
 }
 
 function updateNpcMode(){
@@ -241,7 +244,15 @@ function mkSide(ids,isEnemy=false){
 }
 
 function enemyKnown(id){return !!G?.enemy?.states?.[id]?.revealed}
-function enemyName(id){return enemyKnown(id)?CHARS[id].name:'？？？'}
+function unitDisplayName(side,id,hideUnknown=false){
+  const name=hideUnknown&&side.isEnemy&&!side.states[id].revealed
+    ?'？？？'
+    :CHARS[id].name;
+  const sameNameIds=side.unitIds.filter(unitId=>CHARS[unitId].name===CHARS[id].name);
+  if(sameNameIds.length<2)return name;
+  return `${name}${String.fromCharCode(65+sameNameIds.indexOf(id))}`;
+}
+function enemyName(id){return unitDisplayName(G.enemy,id,true)}
 function revealEnemyUnit(id){if(G.enemy.states[id])G.enemy.states[id].revealed=true}
 
 function log(msg,cls=''){
@@ -367,7 +378,7 @@ function unitStateHTML(side,id){
 
   if(side.isEnemy&&!s.revealed){
     return `<div class="unitstate">
-      <b>？？？</b><br>
+      <b>${unitDisplayName(side,id,true)}</b><br>
       <span class="sp">準備 ${s.sp}</span>
       ${s.decisiveReady?' / <span style="color:#ffd479">決戦準備</span>':''}<br>
       <span class="small">武力 ??? / カリスマ ??? / 知略 ???</span>
@@ -375,7 +386,7 @@ function unitStateHTML(side,id){
   }
 
   return `<div class="unitstate">
-    <b>${c.name}</b><br>
+    <b>${unitDisplayName(side,id)}</b><br>
     <span class="sp">準備 ${s.sp}</span>
     ${s.decisiveReady?' / <span style="color:#ffd479">決戦準備</span>':''}<br>
     <span class="small">
@@ -396,14 +407,14 @@ function render(){
 
   $('#selection').innerHTML=[0,1,2,3].map(i=>
     G.selected[i]
-      ?`<div class="slot filled">${i+1}. ${CHARS[G.selected[i].unit].name}<br><b>${cmdName(G.selected[i].type)}</b></div>`
+      ?`<div class="slot filled">${i+1}. ${unitDisplayName(G.player,G.selected[i].unit)}<br><b>${cmdName(G.selected[i].type)}</b></div>`
       :`<div class="slot">${i+1}. 未選択</div>`
   ).join('');
 
   $('#hand').innerHTML=G.hand.map((c,i)=>
     `<button class="card ${c.type}" data-i="${i}">
       <span class="num">${i+1}</span>
-      <div class="who">${CHARS[c.unit].name}</div>
+      <div class="who">${unitDisplayName(G.player,c.unit)}</div>
       <div class="cmd">${cmdName(c.type)}</div>
       <div class="small">${cmdDetail(c)}</div>
     </button>`
@@ -529,7 +540,7 @@ async function prepStep(side,card,label){
 
   const st=side.states[card.unit];
   const ch=CHARS[card.unit];
-  const shown=side.isEnemy?enemyName(card.unit):ch.name;
+  const shown=unitDisplayName(side,card.unit,side.isEnemy);
 
   if(st.decisiveReady){
     await battleStep(
@@ -574,7 +585,7 @@ async function triggeredSkills(side,label){
 
         await battleStep(
           '特殊技能',
-          `${label} ${ch.name}「${ch.skill.name}」`,
+          `${label} ${unitDisplayName(side,id,side.isEnemy)}「${ch.skill.name}」`,
           `${side.isEnemy?'敵ユニットの正体が判明！ ':''}準備条件達成。<strong>決戦準備状態</strong>になった！`,
           'skill',
           'skilllog'
@@ -650,7 +661,7 @@ async function applySkill(side,opp,id,label){
   render();
   await battleStep(
     '特殊技能',
-    `${label} ${c.name}「${c.skill.name}」`,
+    `${label} ${unitDisplayName(side,id,side.isEnemy)}「${c.skill.name}」`,
     body,
     'skill',
     'skilllog'
@@ -659,7 +670,7 @@ async function applySkill(side,opp,id,label){
 
 async function resolvePair(pc,ec,n){
   const ptxt=pc&&pc.unit
-    ?`${CHARS[pc.unit].name}<br><strong>${cmdName(pc.type)}</strong>`
+    ?`${unitDisplayName(G.player,pc.unit)}<br><strong>${cmdName(pc.type)}</strong>`
     :'空白';
 
   const etxt=`${enemyName(ec.unit)}<br><strong>${cmdName(ec.type)}</strong>`;
@@ -692,7 +703,7 @@ async function resolvePair(pc,ec,n){
 
     await battleStep(
       '招集',
-      `自軍 ${CHARS[pc.unit].name}`,
+      `自軍 ${unitDisplayName(G.player,pc.unit)}`,
       `カリスマにより戦力 <strong>+${fmt(v)}</strong>。この実働中、敵の策略を防ぐ。`,
       'good',
       'good'
@@ -717,7 +728,7 @@ async function resolvePair(pc,ec,n){
     if(eRecruit){
       await battleStep(
         '策略',
-        `自軍 ${CHARS[pc.unit].name}`,
+        `自軍 ${unitDisplayName(G.player,pc.unit)}`,
         '敵軍の招集に防がれ、策略は<strong>失敗</strong>。',
         '',
         'sys'
@@ -729,7 +740,7 @@ async function resolvePair(pc,ec,n){
 
       await battleStep(
         '策略',
-        `自軍 ${CHARS[pc.unit].name}`,
+        `自軍 ${unitDisplayName(G.player,pc.unit)}`,
         `敵戦力 <strong>-${fmt(v)}</strong>。`,
         'good',
         'good'
@@ -867,7 +878,7 @@ async function useDecisiveStep(side,label){
 
   await battleStep(
     '決戦スキル',
-    `${label} ${c.name}「${c.skill.name}」`,
+    `${label} ${unitDisplayName(side,id,side.isEnemy)}「${c.skill.name}」`,
     `戦力を${multiplier}倍 → <strong>${fmt(side.power)}</strong>`,
     'skill',
     'skilllog'
@@ -881,7 +892,7 @@ function showResult(title,cls,msg){
   const r=$('#result');
   r.classList.remove('hidden');
 
-  const enemy=G.npc.units.map(id=>CHARS[id].name).join(' ＋ ');
+  const enemy=G.npc.units.map(id=>unitDisplayName(G.enemy,id)).join(' ＋ ');
 
   if(G.mode==='streak'){
     if(cls==='win')G.run.wins++;
