@@ -164,7 +164,9 @@ function charCard(c){
 }
 
 function initSetup(){
-  const opts=Object.values(CHARS).map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+  const opts=Object.values(CHARS)
+    .filter(c=>c.selectable!==false)
+    .map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
   $('#p1').innerHTML=opts;
   $('#p2').innerHTML=opts;
   $('#p1').value='tsukune';
@@ -209,6 +211,12 @@ function makeDeck(ids){
     }
   }
   return deck;
+}
+
+function normalizePlayerUnits(ids){
+  return ids[0]==='vanilla'&&ids[1]==='vanilla'
+    ?['vanilla','vanilla_clone']
+    :ids;
 }
 
 function shuffle(a){
@@ -293,22 +301,23 @@ function randomNpcId(excludeId=null){
 }
 
 function start(){
-  if($('#p1').value===$('#p2').value){
+  if($('#p1').value===$('#p2').value&&$('#p1').value!=='vanilla'){
     alert('同じユニットを2体選ぶことはできません。');
     return;
   }
 
   const mode=$('#npcMode').value;
   const npcId=mode==='fixed'?$('#npcSelect').value:randomNpcId();
+  const selectedUnits=normalizePlayerUnits([$('#p1').value,$('#p2').value]);
   const run=mode==='streak'
-    ?{wins:0,lastNpcId:null,playerUnits:[$('#p1').value,$('#p2').value]}
+    ?{wins:0,lastNpcId:null,playerUnits:selectedUnits}
     :null;
 
-  startMatch(mode,npcId,run);
+  startMatch(mode,npcId,run,selectedUnits);
 }
 
-function startMatch(mode,npcId,run=null){
-  const playerUnits=run?.playerUnits||[$('#p1').value,$('#p2').value];
+function startMatch(mode,npcId,run=null,selectedUnits=null){
+  const playerUnits=run?.playerUnits||selectedUnits||normalizePlayerUnits([$('#p1').value,$('#p2').value]);
 
   const npc=NPCS[npcId];
   const deck=shuffle(makeDeck(playerUnits));
@@ -469,7 +478,15 @@ async function resolveTurn(){
   G.enemy.mods.enemySchemeMult=1;
   G.enemy.mods.recruitMult=1;
 
-  const npcActions=G.npc.turns[G.turn-1].map((x,i)=>({
+  const npcTurn=G.npc.randomActions
+    ?Array.from({length:4},()=>{
+      const unit=G.npc.units[Math.floor(Math.random()*G.npc.units.length)];
+      const types=['recruit','scheme','prepare'];
+      return [unit,types[Math.floor(Math.random()*types.length)]];
+    })
+    :G.npc.turns[G.turn-1];
+
+  const npcActions=npcTurn.map((x,i)=>({
     uid:`npc_${G.turn}_${i}`,
     unit:x[0],
     type:x[1]
@@ -605,6 +622,11 @@ async function applySkill(side,opp,id,label){
     case 'binding_rope':
       opp.mods.persistentStatMult*=0.8;
       body='相手のすべてのユニットの武力・カリスマ・知略を <strong>0.8倍</strong>。';
+      break;
+
+    case 'vanilla_fist':
+      side.power+=800;
+      body='戦力 <strong>+800</strong>。';
       break;
 
     case 'laser':
