@@ -5,6 +5,13 @@
 // recruit=招集 / scheme=策略 / prepare=準備
 // ==========================================
 const NPCS = {
+  vanilla_twins:{
+    name:'バニラ×2',
+    style:'完全ランダム型',
+    units:['vanilla','vanilla_clone'],
+    randomActions:true
+  },
+
   crow_bonret:{
     name:'クロウ＋ボンレット',
     style:'後半爆発型',
