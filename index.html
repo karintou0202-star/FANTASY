@@ -226,7 +226,7 @@ function mkSide(ids,isEnemy=false){
     states:Object.fromEntries(ids.map(id=>[
       id,{sp:0,decisiveReady:false,revealed:!isEnemy}
     ])),
-    mods:{statMult:1,enemySchemeMult:1,recruitMult:1},
+    mods:{statMult:1,persistentStatMult:1,enemySchemeMult:1,recruitMult:1},
     powerRevealed:false,
     isEnemy
   };
@@ -350,7 +350,7 @@ $('#startBtn').onclick=start;
 $('#resetBtn').onclick=()=>location.reload();
 
 function effectiveStat(side,id,key){
-  return CHARS[id][key]*side.mods.statMult;
+  return CHARS[id][key]*side.mods.statMult*side.mods.persistentStatMult;
 }
 
 function unitStateHTML(side,id){
@@ -462,8 +462,12 @@ async function resolveTurn(){
 
   await battleStep(`ターン${G.turn}`,'実働開始','選択した4枚のコマンドを順番に解決します。');
 
-  G.player.mods={statMult:1,enemySchemeMult:1,recruitMult:1};
-  G.enemy.mods={statMult:1,enemySchemeMult:1,recruitMult:1};
+  G.player.mods.statMult=1;
+  G.player.mods.enemySchemeMult=1;
+  G.player.mods.recruitMult=1;
+  G.enemy.mods.statMult=1;
+  G.enemy.mods.enemySchemeMult=1;
+  G.enemy.mods.recruitMult=1;
 
   const npcActions=G.npc.turns[G.turn-1].map((x,i)=>({
     uid:`npc_${G.turn}_${i}`,
@@ -596,6 +600,11 @@ async function applySkill(side,opp,id,label){
     case 'p_commander':
       side.mods.statMult=1.5;
       body='このターン中、両ユニットの武力・カリスマ・知略を <strong>1.5倍</strong>。';
+      break;
+
+    case 'binding_rope':
+      opp.mods.persistentStatMult*=0.8;
+      body='相手のすべてのユニットの武力・カリスマ・知略を <strong>0.8倍</strong>。';
       break;
 
     case 'laser':
@@ -829,16 +838,15 @@ async function useDecisiveStep(side,label){
   if(side.isEnemy)revealEnemyUnit(id);
   side.states[id].decisiveReady=false;
 
-  if(c.skill.id==='cavalry'){
-    side.power=Math.floor(side.power*1.3);
-  }
+  const multiplier=c.skill.multiplier||1;
+  side.power=Math.floor(side.power*multiplier);
 
   render();
 
   await battleStep(
     '決戦スキル',
     `${label} ${c.name}「${c.skill.name}」`,
-    `戦力を1.3倍 → <strong>${fmt(side.power)}</strong>`,
+    `戦力を${multiplier}倍 → <strong>${fmt(side.power)}</strong>`,
     'skill',
     'skilllog'
   );
