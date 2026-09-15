@@ -55,6 +55,8 @@ select{width:100%;padding:12px;background:#111722;color:var(--text);border:1px s
 .win{color:#8ddeaa}.lose{color:#ff8e8e}.draw{color:#ddd}
 .small{font-size:12px;color:var(--muted)}.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.spacer{flex:1}
 .streak{border-color:var(--accent);color:#ffe0a3}.streak .big{margin-left:4px}
+.rulesBox{margin:12px 0;padding:12px 14px;background:#111722;border:1px solid var(--line);border-radius:12px;line-height:1.65}
+.rulesBox h3{margin:0 0 6px}.rulesBox p{margin:4px 0}
 </style>
 </head>
 <body>
@@ -69,7 +71,13 @@ select{width:100%;padding:12px;background:#111722;color:var(--text);border:1px s
 
 <section id="setup" class="panel">
   <h2>部隊編成</h2>
-  <p class="small">自分のユニットを必ず2体選択してください。同じユニットは選べません。</p>
+  <div class="rulesBox">
+    <h3>遊び方</h3>
+    <p>ユニット2体の合計16枚で戦います。初手は8枚、次のターンから4枚補充し、毎ターン使う4枚を順番に選びます。</p>
+    <p><b class="win">招集</b>：戦力を増やし、同時に使われた敵の策略を防ぐ。　<b class="lose">策略</b>：敵の戦力を減らす。　<span class="sp">準備</span>：必要数に達すると特殊技能が発動する。</p>
+    <p>3ターン後に戦力が高い方の勝利。途中で戦力が0以下になっても敗北します。</p>
+  </div>
+  <p class="small">自分のユニットを必ず2体選択してください。原則として同じユニットは選べません（バニラを除く）。</p>
   <div class="grid2">
     <div><label>自軍ユニットA</label><select id="p1"></select></div>
     <div><label>自軍ユニットB</label><select id="p2"></select></div>
@@ -378,7 +386,7 @@ function unitStateHTML(side,id){
   if(side.isEnemy&&!s.revealed){
     return `<div class="unitstate">
       <b>${unitDisplayName(side,id,true)}</b><br>
-      <span class="sp">準備 ${s.sp}</span>
+      <span class="sp">準備 ${s.sp} / ？</span>
       ${s.decisiveReady?' / <span style="color:#ffd479">決戦準備</span>':''}<br>
       <span class="small">武力 ??? / カリスマ ??? / 知略 ???</span>
     </div>`;
@@ -386,7 +394,7 @@ function unitStateHTML(side,id){
 
   return `<div class="unitstate">
     <b>${unitDisplayName(side,id)}</b><br>
-    <span class="sp">準備 ${s.sp}</span>
+    <span class="sp">準備 ${s.sp} / ${c.skill.cost}</span>
     ${s.decisiveReady?' / <span style="color:#ffd479">決戦準備</span>':''}<br>
     <span class="small">
       実効 武${fmt(effectiveStat(side,id,'power'))}
