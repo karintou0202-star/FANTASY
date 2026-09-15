@@ -186,6 +186,7 @@ const CHARS = {
     power:800,
     charisma:400,
     intel:400,
+    trait:'編成時に2体並べても良い',
     skill:{
       id:'vanilla_fist',
       name:'バニラ神拳',
@@ -205,6 +206,7 @@ const CHARS = {
     power:800,
     charisma:400,
     intel:400,
+    trait:'編成時に2体並べても良い',
     selectable:false,
     skill:{
       id:'vanilla_fist',
