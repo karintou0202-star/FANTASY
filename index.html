@@ -648,11 +648,11 @@ async function applySkill(side,opp,id,label){
       break;
 
     case 'laser':
-      opp.power-=1500;
+      opp.power-=2000;
       for(const u of opp.unitIds){
         if(opp.states[u].sp>=1)opp.states[u].sp=0;
       }
-      body='相手戦力 <strong>-1,500</strong>。さらに準備1以上の相手ユニットの準備を0にする。';
+      body='相手戦力 <strong>-2,000</strong>。さらに準備1以上の相手ユニットの準備を0にする。';
       break;
 
     case 'recon':{
