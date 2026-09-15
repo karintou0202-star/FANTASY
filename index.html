@@ -245,9 +245,8 @@ function mkSide(ids,isEnemy=false){
 
 function enemyKnown(id){return !!G?.enemy?.states?.[id]?.revealed}
 function unitDisplayName(side,id,hideUnknown=false){
-  const name=hideUnknown&&side.isEnemy&&!side.states[id].revealed
-    ?'？？？'
-    :CHARS[id].name;
+  if(hideUnknown&&side.isEnemy&&!side.states[id].revealed)return '？？？';
+  const name=CHARS[id].name;
   const sameNameIds=side.unitIds.filter(unitId=>CHARS[unitId].name===CHARS[id].name);
   if(sameNameIds.length<2)return name;
   return `${name}${String.fromCharCode(65+sameNameIds.indexOf(id))}`;
