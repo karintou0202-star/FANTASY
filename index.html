@@ -28,6 +28,10 @@ select{width:100%;padding:12px;background:#111722;color:var(--text);border:1px s
 .character h3{margin:0 0 4px;font-size:17px}.tags{color:var(--muted);font-size:12px}
 .stats{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;font-size:13px}
 .skill{margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);font-size:13px;line-height:1.5}
+.trait{margin-top:7px;font-size:13px;line-height:1.5}
+.commands{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;padding-top:8px;border-top:1px dashed var(--line)}
+.commandTag{padding:5px 8px;border-radius:8px;background:#111722;border:1px solid var(--line);font-size:12px;font-weight:800}
+.commandTag.recruit{color:var(--ok)}.commandTag.scheme{color:#ff8c8c}.commandTag.prepare{color:var(--blue)}
 .topbar{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center}
 .badge{background:#101722;border:1px solid var(--line);padding:8px 11px;border-radius:999px;font-size:13px}
 .big{font-weight:900;font-size:20px}.enemyPower{letter-spacing:.18em}
@@ -167,7 +171,13 @@ function charCard(c,displayName=c.name){
     <div class="stats">
       <b>武力 ${c.power}</b><b>カリスマ ${c.charisma}</b><b>知略 ${c.intel}</b>
     </div>
-    <div class="skill"><b>${c.skill.name}</b>　準備${c.skill.cost}<br>${c.skill.text}</div>
+    <div class="skill"><b>特殊技能：${c.skill.name}</b>　準備${c.skill.cost}<br>${c.skill.text}</div>
+    <div class="trait"><b>特性：</b>${c.trait||'なし'}</div>
+    <div class="commands">
+      <span class="commandTag recruit">招集 ×${c.commands.recruit}</span>
+      <span class="commandTag scheme">策略 ×${c.commands.scheme}</span>
+      <span class="commandTag prepare">準備 ×${c.commands.prepare}</span>
+    </div>
   </div>`;
 }
 
