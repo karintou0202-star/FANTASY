@@ -142,6 +142,59 @@ const NPCS = {
     ]
   },
 
+
+  larin_jackeen:{
+    name:'ラーリン＋ジャキーン',
+    style:'能力減少型',
+    units:['larin','jackeen'],
+    turns:[
+      [
+        ['larin','prepare'],
+        ['larin','prepare'],
+        ['larin','recruit'],
+        ['jackeen','recruit']
+      ],
+      [
+        ['larin','scheme'],
+        ['jackeen','prepare'],
+        ['jackeen','prepare'],
+        ['larin','recruit']
+      ],
+      [
+        ['larin','scheme'],
+        ['larin','recruit'],
+        ['jackeen','recruit'],
+        ['jackeen','recruit']
+      ]
+    ]
+  },
+
+  zazan_vanilla:{
+    name:'ザザン＋バニラ',
+    style:'重装決戦型',
+    units:['vanilla','zazan'],
+    turns:[
+      [
+        ['vanilla','recruit'],
+        ['vanilla','recruit'],
+        ['vanilla','recruit'],
+        ['zazan','scheme']
+      ],
+      [
+        ['vanilla','prepare'],
+        ['vanilla','prepare'],
+        ['zazan','recruit'],
+        ['zazan','recruit']
+      ],
+      [
+        ['zazan','recruit'],
+        ['zazan','prepare'],
+        ['zazan','prepare'],
+        ['zazan','prepare']
+      ]
+    ]
+  },
+
   ggg_guren:{
     name:'GGG＋紅蓮',
     style:'レーザー妨害型',
