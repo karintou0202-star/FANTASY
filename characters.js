@@ -32,13 +32,13 @@ const CHARS = {
     rarity:2,
     power:800,
     charisma:350,
-    intel:450,
+    intel:500,
     skill:{
       id:'guerrilla',
       name:'ゲリラ戦術',
-      cost:2,
+      cost:1,
       type:'normal',
-      text:'相手の戦力を知略の2.0倍減少'
+      text:'相手の戦力を知略の1.5倍減少'
     },
     commands:{recruit:1,scheme:5,prepare:2}
   },
@@ -97,7 +97,7 @@ const CHARS = {
       type:'normal',
       text:'このターン、自分の両ユニットのステータス1.5倍'
     },
-    commands:{recruit:2,scheme:3,prepare:3}
+    commands:{recruit:3,scheme:3,prepare:2}
   },
 
   ggg:{
@@ -155,7 +155,7 @@ const CHARS = {
       multiplier:1.7,
       text:'決戦スキル・自分の戦力を1.7倍する'
     },
-    commands:{recruit:2,scheme:2,prepare:4}
+    commands:{recruit:3,scheme:2,prepare:3}
   },
 
   larin:{
@@ -164,7 +164,7 @@ const CHARS = {
     role:'策士',
     race:'エルフ♀',
     rarity:2,
-    power:670,
+    power:770,
     charisma:380,
     intel:480,
     skill:{
@@ -174,7 +174,7 @@ const CHARS = {
       type:'normal',
       text:'相手のすべてのユニットのステータスを0.8倍にする'
     },
-    commands:{recruit:2,scheme:4,prepare:2}
+    commands:{recruit:3,scheme:3,prepare:2}
   },
 
   vanilla:{
