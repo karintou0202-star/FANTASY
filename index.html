@@ -710,8 +710,18 @@ async function resolvePair(pc,ec,n){
   const ps=await triggeredSkills(G.player,'自軍');
   const es=await triggeredSkills(G.enemy,'敵軍');
 
-  for(const id of ps)await applySkill(G.player,G.enemy,id,'自軍');
-  for(const id of es)await applySkill(G.enemy,G.player,id,'敵軍');
+  // 同時発動した特殊技能は、ステータス低下を先に反映する。
+  // 発動自体はすでに確定しているため、デバフや準備破壊では取り消されない。
+  const skillEvents=[
+    ...ps.map(id=>({side:G.player,opp:G.enemy,id,label:'自軍'})),
+    ...es.map(id=>({side:G.enemy,opp:G.player,id,label:'敵軍'}))
+  ];
+  const skillPriority=id=>CHARS[id].skill.id==='binding_rope'?0:1;
+  skillEvents.sort((a,b)=>skillPriority(a.id)-skillPriority(b.id));
+
+  for(const event of skillEvents){
+    await applySkill(event.side,event.opp,event.id,event.label);
+  }
 
   const pRecruit=pc&&pc.type==='recruit';
   const eRecruit=ec.type==='recruit';
