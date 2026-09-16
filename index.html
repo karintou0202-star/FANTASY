@@ -625,7 +625,7 @@ async function applySkill(side,opp,id,label){
 
   switch(c.skill.id){
     case 'guerrilla':{
-      const v=effectiveStat(side,id,'intel')*2;
+      const v=effectiveStat(side,id,'intel')*1.5;
       opp.power-=v;
       body=`相手戦力を <strong>${fmt(v)}</strong> 減少。`;
       break;
