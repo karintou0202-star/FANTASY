@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>勇者ロイドの戦術講義｜ストーリー体験版</title>
+<style>
+:root{--bg:#0d1118;--panel:#182131;--panel2:#222e42;--line:#41506a;--text:#f3f5f8;--muted:#b8c0cc;--gold:#e7bd65;--red:#ef7777;--green:#7bd29d;--blue:#79aef8}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 50% 0,#26344b 0,#111722 38%,#090d13 100%);color:var(--text);font-family:system-ui,-apple-system,"Noto Sans JP",sans-serif;min-height:100vh}
+button{font:inherit}.wrap{width:min(980px,calc(100% - 24px));margin:18px auto 60px}.hidden{display:none!important}
+header{display:flex;gap:12px;justify-content:space-between;align-items:center;margin-bottom:15px}h1{font-size:clamp(22px,5vw,35px);margin:0}.sub{font-size:13px;color:var(--muted)}
+.panel{background:rgba(24,33,49,.97);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:14px;box-shadow:0 12px 35px #0005}
+.btn{border:0;border-radius:10px;padding:11px 17px;background:var(--gold);color:#231a09;font-weight:900;cursor:pointer}.btn.secondary{background:#34445f;color:var(--text)}.btn:disabled{opacity:.4;cursor:not-allowed}
+.menu{display:grid;grid-template-columns:1fr 1fr;gap:12px}.menu button{min-height:105px;text-align:left}.menu b{font-size:18px}.menu span{display:block;margin-top:7px;font-size:13px;font-weight:500}
+@media(max-width:650px){.menu{grid-template-columns:1fr}header{align-items:flex-start;flex-direction:column}}
+.chapter{color:var(--gold);font-size:12px;font-weight:900;letter-spacing:.15em}.speaker{font-size:21px;font-weight:900;margin:10px 0 7px}.dialogue{font-size:17px;line-height:1.8;min-height:85px;white-space:pre-wrap}
+.portrait{height:8px;border-radius:9px;background:linear-gradient(90deg,var(--gold),transparent);margin-bottom:13px}.controls{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:16px}
+.lesson{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.lesson button{min-height:105px;background:#202c40;color:var(--text);border:1px solid var(--line);border-radius:12px;font-weight:900;cursor:pointer}.lesson button.done{border-color:var(--green);color:var(--green)}.lesson button.glow{box-shadow:0 0 0 2px var(--gold),0 0 24px #e7bd6555}.lesson button:disabled{opacity:.35}
+@media(max-width:600px){.lesson{grid-template-columns:1fr}}
+.meterRow{display:grid;grid-template-columns:1fr 1fr;gap:12px}.meter{background:#0e1520;border:1px solid var(--line);border-radius:12px;padding:12px}.meter b{font-size:20px}.bar{height:10px;background:#283247;border-radius:10px;overflow:hidden;margin-top:8px}.fill{height:100%;background:var(--green);transition:.35s}.enemy .fill{background:var(--red)}
+.tip{padding:11px 13px;background:#101824;border-left:4px solid var(--gold);line-height:1.6;margin:12px 0}.hand{display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:8px}.card{background:#222e42;border:1px solid var(--line);color:var(--text);border-radius:11px;padding:10px;text-align:left;cursor:pointer;min-height:82px}.card.selected{outline:2px solid var(--gold)}.card .type{display:block;font-size:19px;font-weight:900;margin-top:4px}.recruit{color:var(--green)}.scheme{color:#ff9090}.prepare{color:var(--blue)}
+.slots{display:flex;gap:7px;flex-wrap:wrap;min-height:43px;margin:10px 0}.slot{padding:9px;border:1px dashed var(--line);border-radius:9px;min-width:105px}.slot.full{border-style:solid}.log{background:#090e15;border:1px solid var(--line);border-radius:11px;max-height:240px;overflow:auto;padding:11px;font-size:13px;line-height:1.65}.log div+div{margin-top:5px}.good{color:#91dfad}.bad{color:#ff9999}.skill{color:#ffd77d;font-weight:900}
+.result{text-align:center;padding:24px}.result h2{font-size:31px;margin:5px}.progress{display:flex;gap:6px;margin:8px 0 16px}.progress i{height:5px;flex:1;background:#344057;border-radius:8px}.progress i.on{background:var(--gold)}
+</style>
+</head>
+<body><div class="wrap">
+<header><div><h1>勇者ロイドの戦術講義</h1><div class="sub">『よくあるファンタジー世界のバトルゲーム』ストーリー体験版</div></div><a class="btn secondary" href="./">フリーNPC戦へ</a></header>
+<section id="menu" class="panel">
+ <div class="chapter">STORY DEMO</div><h2>チュートリアルを始める</h2>
+ <p>ロイドの記憶から始まり、ロウジャ、ツクネ、カットールとの演習を通して戦術を学びます。</p>
+ <div class="menu"><button class="btn" id="newGame"><b>最初から遊ぶ</b><span>操作説明から全編を体験</span></button><button class="btn secondary" id="continueGame"><b>続きから</b><span id="saveText">セーブデータなし</span></button></div>
+</section>
+<section id="story" class="hidden">
+ <div class="panel"><div id="progress" class="progress"></div><div id="chapter" class="chapter"></div><div class="portrait"></div><div id="speaker" class="speaker"></div><div id="dialogue" class="dialogue"></div><div id="storyExtra"></div><div class="controls"><button id="next" class="btn">次へ</button></div></div>
+</section>
+<section id="battle" class="hidden">
+ <div class="panel"><div class="chapter" id="battleTitle"></div><div id="battleTip" class="tip"></div><div class="meterRow"><div class="meter"><span>自軍戦力</span><br><b id="pPower"></b><div class="bar"><div id="pFill" class="fill"></div></div></div><div class="meter enemy"><span>敵戦力</span><br><b id="ePower"></b><div class="bar"><div id="eFill" class="fill"></div></div></div></div></div>
+ <div id="strategy" class="panel"><h3>ターン <span id="turn"></span> / 3　コマンドを4枚選択</h3><div id="slots" class="slots"></div><div id="hand" class="hand"></div><div class="controls"><button id="undo" class="btn secondary">1枚戻す</button><button id="resolve" class="btn" disabled>この順番で実行</button></div></div>
+ <div class="panel"><h3>戦闘履歴</h3><div id="battleLog" class="log"></div></div>
+</section>
+<section id="ending" class="panel result hidden"><div class="chapter">DEMO CLEAR</div><h2>ストーリー体験版・完</h2><p>ロイドは正式に勇者として認められた。<br>彼の冒険はこれからも続く。</p><div class="controls" style="justify-content:center"><button class="btn" onclick="location.reload()">タイトルへ</button><a class="btn secondary" href="./">フリーNPC戦へ</a></div></section>
+</div>
+<script>
+const $=s=>document.querySelector(s);
+const SAVE='fantasy_story_demo_v1';
+const chapters=['幼き日の教え','ロウジャの策略講義','騎兵隊長ツクネ','父を越える戦い'];
+let sceneIndex=0, lessonDone=new Set(), prepStep=0, currentChapter=0, battle=null;
+const scenes=[
+ ['幼き日の教え','子ロイド','僕、大きくなったらお父さんみたいになるんだ'],
+ ['幼き日の教え','カットール','ははは、良い子だ。では俺が戦闘の仕方を教えよう'],
+ ['幼き日の教え','子ロイド','お父さん、ありがとう'],
+ ['幼き日の教え','ロイド','昔はあんなにお父さん子だったな……'],
+ ['幼き日の教え','カットール','では、コマンドの入力方法から教えるぞ。難しい事はない。8個のコマンドから4つを選ぶんだ'],
+ ['幼き日の教え','子ロイド','どれを選べばいいか、分かんないよ～'],
+ ['幼き日の教え','カットール','たしかに最初は分からんよな。まずは一つ選んでみなさい','LESSON'],
+ ['幼き日の教え','カットール','ついに決戦の時が来たようだ。ここまでのおさらいだ。招集は戦力を増やし、策略から身を守る。策略は相手の戦力を減らす。準備は力を貯め、強力な特殊技能を使える'],
+ ['幼き日の教え','カットール','今までの行動で十分戦力は溜まった。これなら決戦でも負けないな'],
+ ['幼き日の教え','子ロイド','そうなんだ。お父さん行っちゃうの？'],
+ ['幼き日の教え','カットール','決戦にはリスクが付きまとうが、息子よ。必ず勝利して来るからしばし待て'],
+ ['幼き日の教え','子ロイド','お、お父さんー'],
+ ['幼き日の教え','カットール','行くぞ、全軍突撃！'],
+ ['幼き日の教え','ロイド','あのときは夕飯時には帰って来てたな'],
+ ['幼き日の教え','オリンポス','ロイド、大丈夫？'],
+ ['幼き日の教え','ロイド','ああ、大丈夫。これがあるからね。父さんみたいにはならないよ。','CHAPTER_LOWJA'],
+ ['ロウジャの策略講義','ロイド','でだ、演習の為にこんな山奥まで来たが……'],
+ ['ロウジャの策略講義','オリンポス','あはは、たしかに山奥だね。この辺りにエルフの里があって、今回の講師はそこの人だよ'],
+ ['ロウジャの策略講義','エルフの男性','おい、そこの止まれ'],
+ ['ロウジャの策略講義','オリンポス','あー、ダメダメ。エルフの里の方ですよね。ロウジャさん宛にお手紙が……'],
+ ['ロウジャの策略講義','エルフの男性','……しばし待たれよ。長老と連絡を取る'],
+ ['ロウジャの策略講義','ロイド','何か殺気を感じた'],
+ ['ロウジャの策略講義','ロイド','いつまで待たせるんだ。もう3時間になるぞ'],
+ ['ロウジャの策略講義','オリンポス','エルフだしね。しばしなら3日ぐらいかかるかも'],
+ ['ロウジャの策略講義','ロウジャ','おい、そこの者。ロイドとオリンポスであろう。今回の講師を務める、ロウジャという'],
+ ['ロウジャの策略講義','ロイド','おい、囲まれてるぞ'],
+ ['ロウジャの策略講義','ロウジャ','今回は山中で講義をしてやろう。村を荒らされては敵わんしな。早速、策略について講義を始めよう','SCRIPTED_LOWJA'],
+ ['ロウジャの策略講義','ロウジャ','計略と策略の強さはわかったじゃろう。次行くぞい','BATTLE_LOWJA'],
+ ['ロウジャの策略講義','ロウジャ','ふむ、良い動きじゃった。おぬしらも策略のコツを覚えたようじゃな'],
+ ['ロウジャの策略講義','オリンポス','良かったね。これで策略戦術も……バッチリだね'],
+ ['ロウジャの策略講義','ロイド','お、おう。まだなんか納得いかねぇ……','CHAPTER_TSUKUNE'],
+ ['騎兵隊長ツクネ','ロイド','うわー、キツい……'],
+ ['騎兵隊長ツクネ','オリンポス','たしかに今回はツクネさんとの演習だけど、ハードだね'],
+ ['騎兵隊長ツクネ','ツクネ','こら、何を喋っている。この軟弱者め。戦場では歩く、走るが基本だ'],
+ ['騎兵隊長ツクネ','ツクネ','気に入らないんだよ、ロイド！ 英雄の息子がぽっと出で指揮官になるなど、私は気に入らない。勝負しろ！'],
+ ['騎兵隊長ツクネ','ロイド','勝負？　受けてやるぜ'],
+ ['騎兵隊長ツクネ','ツクネ','騎兵決戦で勝負だ'],
+ ['騎兵隊長ツクネ','オリンポス','今回はロイドだけで行ってもらうよ。相手の戦略を真似てみよう。相手の行動をよく見て、自分の行動に取り込むんだ','BATTLE_TSUKUNE'],
+ ['騎兵隊長ツクネ','ツクネ','負けた……'],
+ ['騎兵隊長ツクネ','アゾアラス','いい勝負だった。ツクネの戦略は教科書通りだ。しかし相手も考える生き物だ'],
+ ['騎兵隊長ツクネ','アゾアラス','適当な相手には最高効率の戦術を。相手が上なら対応策を。こちらに対応するなら、フェイントを入れてずらす。これが戦場で生き残るための心得だ'],
+ ['騎兵隊長ツクネ','ロイド','んじゃ、俺が勝てたのは戦略で上回ったって感じか'],
+ ['騎兵隊長ツクネ','アゾアラス','今回たまたまの可能性はあるがな。では最後の講義は私が担当しよう','CHAPTER_KATTOL'],
+ ['父を越える戦い','アゾアラス','基本とは普遍的な教えでなければならない。場合によって使い分けるものは基礎とは言うまい'],
+ ['父を越える戦い','アゾアラス','座学も飽きてきた頃合だろう。特別な講師を呼んである'],
+ ['父を越える戦い','カットール','アゾアラス、てめぇ。ぶっ飛ばすぞ'],
+ ['父を越える戦い','ロイド','父さん、どうしたんだよ。騎士団は辞めたんじゃなかったのかよ'],
+ ['父を越える戦い','カットール','そのなまくらで勇者を名乗るつもりじゃねぇだろうな。俺が勝ったらこいつを持って帰るぞ'],
+ ['父を越える戦い','ロイド','諦めない。父さん、行くぞ','BATTLE_KATTOL'],
+ ['父を越える戦い','ロイド','……勝った'],
+ ['父を越える戦い','カットール','ロイド！ てめぇはガキだ。上手くいかねぇ時もある。そういう時はすぐ戻ってこい'],
+ ['父を越える戦い','アゾアラス','見事な勝利だ。相手の行動を読み、的確に動いた結果だな'],
+ ['父を越える戦い','アゾアラス','只今をもってロイドを正式に勇者として認定する。王国の剣として戦い抜いてほしい'],
+ ['父を越える戦い','ロイド','はい！','END']
+];
+function save(){localStorage.setItem(SAVE,JSON.stringify({sceneIndex,currentChapter}))}
+function updateSaveLabel(){const s=localStorage.getItem(SAVE);$('#continueGame').disabled=!s;$('#saveText').textContent=s?'前回の場面から再開':'セーブデータなし'}
+function showStory(){['menu','battle','ending'].forEach(id=>$('#'+id).classList.add('hidden'));$('#story').classList.remove('hidden')}
+function renderProgress(){currentChapter=Math.max(0,chapters.indexOf(scenes[sceneIndex]?.[0]||chapters[3]));$('#progress').innerHTML=chapters.map((_,i)=>'<i class="'+(i<=currentChapter?'on':'')+'"></i>').join('')}
+function renderScene(){showStory();const s=scenes[sceneIndex];if(!s)return finishDemo();renderProgress();$('#chapter').textContent=s[0];$('#speaker').textContent=s[1];$('#dialogue').textContent=s[2];$('#storyExtra').innerHTML='';$('#next').classList.remove('hidden');if(s[3])handleTag(s[3]);save()}
+function handleTag(tag){if(tag==='LESSON'){renderLesson();return}if(tag==='SCRIPTED_LOWJA'){scriptedLowja();return}if(tag.startsWith('BATTLE_')){$('#next').textContent='演習開始';$('#next').onclick=()=>startBattle(tag);return}if(tag==='END'){$('#next').textContent='体験版を終える';$('#next').onclick=finishDemo;return}$('#next').textContent='次へ';$('#next').onclick=advance}
+function advance(){sceneIndex++;$('#next').onclick=advance;$('#next').textContent='次へ';renderScene()}
+function renderLesson(){const names={recruit:'招集',scheme:'策略',prepare:'準備'};$('#next').classList.add('hidden');$('#storyExtra').innerHTML='<div class="tip">3種類のコマンドを好きな順に試そう。</div><div class="lesson">'+Object.entries(names).map(([k,n])=>'<button data-c="'+k+'" class="glow '+(lessonDone.has(k)?'done':'')+'" '+(lessonDone.has(k)?'disabled':'')+'>'+n+'<br><small>'+({recruit:'仲間を集める',scheme:'敵戦力を削る',prepare:'特殊技能を整える'}[k])+'</small></button>').join('')+'</div>';document.querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>lesson(b.dataset.c))}
+function lesson(type){const lines={recruit:['子ロイド','右の数字が増えた！','カットール','招集は仲間を呼び、戦力を増やす。相手の策略から身を守る効果もあるんだ。仲間を大事にするんだぞ'],scheme:['子ロイド','わぁ！ 相手の戦力が1000から850に減った！','カットール','策略は相手の戦力を削る。0にすれば決戦を待たずに勝てる。ただし実戦では敵戦力は見えない。動きから推測することが大切だ'],prepare:['子ロイド','準備？','カットール','特殊技能を使うため、力を蓄えるコマンドだ。聖剣には準備が2回必要だ。もう一度、準備してみなさい']};const l=lines[type];$('#speaker').textContent=l[0];$('#dialogue').textContent=l[1]+'\n\n'+l[2]+'「'+l[3]+'」';if(type==='prepare'&&prepStep===0){prepStep=1;$('#storyExtra').innerHTML='<div class="controls"><button class="btn" id="prepAgain">もう一度準備する</button></div>';$('#prepAgain').onclick=()=>{prepStep=2;lessonDone.add('prepare');$('#speaker').textContent='子ロイド';$('#dialogue').textContent='何！？ これ、かっこいい！\n\nカットール「これが聖剣だ。準備2なら準備を2回。準備1の技能も、準備5の技能もある。使い手によって様々だ」';lessonContinue()};return}lessonDone.add(type);lessonContinue()}
+function lessonContinue(){$('#storyExtra').innerHTML='<div class="controls"><button class="btn" id="lessonNext">続ける</button></div>';$('#lessonNext').onclick=()=>{if(lessonDone.size===3){sceneIndex++;renderScene()}else{const s=scenes[6];$('#speaker').textContent=s[1];$('#dialogue').textContent='よしよし。次のコマンドも試してみよう。';renderLesson()}}}
+function scriptedLowja(){$('#next').classList.add('hidden');$('#storyExtra').innerHTML='<div class="tip"><b>最初の負けイベント</b><br>ロウジャの指示どおり、1ターン目は準備、2ターン目は招集を行う。</div><div class="log"><div>ロウジャ「まずは準備をせい」</div><div class="bad">準備中へ策略が4回命中。戦力 −800</div><div>ロイド「お前がやれって言ったんだろう！」</div><div>ロウジャ「策略は相手の準備中を狙うものじゃ」</div><div>ロイド「次は招集で防ぐ！」</div><div class="skill">ロウジャは《ゲリラ戦術》を発動。戦力 −800</div><div>オリンポス「最後に抵抗するための招集が足りなくなったんだよ」</div><div class="bad">ロイドたちは敗北した。</div></div><div class="controls"><button class="btn" id="scriptNext">講義を続ける</button></div>';$('#scriptNext').onclick=advance}
+const defs={
+ BATTLE_LOWJA:{title:'対ロウジャ・策略実戦',p:{name:'ロイド＆オリンポス',power:1400,cha:100,int:200,skill:'喧嘩殺法',cost:3,damage:600,deck:['prepare','scheme','prepare','scheme','prepare','scheme','recruit','scheme','recruit','prepare','scheme','recruit','prepare','scheme','recruit','prepare']},e:{name:'ロウジャAB',power:800,cha:100,int:200,turns:[['prepare','prepare','prepare','prepare'],['scheme','scheme','scheme','scheme'],['prepare','prepare','none','none']],skillTurns:[[2,0,900],[2,1,900]]},tips:['ロウジャ「準備するぞ」','ロウジャ「策略をするぞ」','ロウジャ「必殺技じゃ」'],lose:'相手は策略のスペシャリストだけど、策略には弱いみたい。準備を整えて殴り合うのも有効だよ。'},
+ BATTLE_TSUKUNE:{title:'対ツクネ・騎兵決戦',p:{name:'騎兵ロイド',power:1000,cha:350,int:300,skill:'騎兵決戦',cost:2,mult:1.3,deck:['recruit','prepare','recruit','scheme','recruit','prepare','scheme','recruit','scheme','recruit','scheme','recruit','scheme','recruit','scheme','recruit']},e:{name:'ツクネ',power:1060,cha:400,int:350,turns:[['recruit','recruit','recruit','recruit'],['prepare','prepare','recruit','recruit'],['scheme','scheme','scheme','scheme']],mult:1.3},tips:['ツクネ「招集で戦力をかき集めろ」','ツクネ「騎兵決戦の準備をしろ」','ツクネ「さあ、力技だけではないことを証明してやる！」'],lose:'序盤は隙がない。相手の戦術を真似つつ、3ターン目の攻勢を往なせば勝ち筋が見えるよ。'},
+ BATTLE_KATTOL:{title:'最終講義・対カットール',p:{name:'聖剣ロイド',power:1000,cha:400,int:420,skill:'聖剣',cost:2,gain:1000,deck:['recruit','prepare','scheme','recruit','prepare','scheme','recruit','prepare','scheme','recruit','prepare','scheme','prepare','scheme','prepare','scheme']},e:{name:'カットール',power:1800,cha:460,int:150,turns:[['prepare','recruit','recruit','recruit'],['scheme','prepare','recruit','recruit'],['scheme','recruit','recruit','recruit']],charge:true},tips:['カットール「仕組みも理解しねぇで勇者を名乗るな」','カットール「その程度か！」','カットール「最後まで立ってみろ！」'],lose:'招集は全部使った？ 聖剣は発動させた？ それでも届かないなら策略だ。相手の行動には癖があるよ。'}
+};
+function startBattle(tag){const d=JSON.parse(JSON.stringify(defs[tag]));battle={tag,d,turn:1,power:d.p.power,enemy:d.e.power,prep:0,enemyPrep:0,decisive:false,selected:[],deck:d.p.deck.map((type,i)=>({type,id:i})),hand:[],discard:[]};draw(8);$('#story').classList.add('hidden');$('#battle').classList.remove('hidden');$('#battleLog').innerHTML='';renderBattle()}
+function draw(n){while(n--&&battle.deck.length)battle.hand.push(battle.deck.shift())}
+function renderBattle(){const b=battle,d=b.d,max=Math.max(d.p.power*4,d.e.power*4,b.power,b.enemy,1);$('#battleTitle').textContent=d.title;$('#battleTip').textContent=d.tips[b.turn-1];$('#turn').textContent=b.turn;$('#pPower').textContent=Math.max(0,Math.floor(b.power));$('#ePower').textContent=Math.max(0,Math.floor(b.enemy));$('#pFill').style.width=Math.max(0,b.power/max*100)+'%';$('#eFill').style.width=Math.max(0,b.enemy/max*100)+'%';$('#slots').innerHTML=[0,1,2,3].map(i=>'<div class="slot '+(b.selected[i]?'full':'')+'">'+(b.selected[i]?(i+1)+'. '+nameCmd(b.selected[i].type):(i+1)+'. ―')+'</div>').join('');$('#hand').innerHTML=b.hand.map((c,i)=>'<button class="card" data-i="'+i+'"><small>'+d.p.name+'</small><span class="type '+c.type+'">'+nameCmd(c.type)+'</span></button>').join('');document.querySelectorAll('.card').forEach(x=>x.onclick=()=>selectCard(+x.dataset.i));$('#resolve').disabled=b.selected.length!==4}
+function nameCmd(t){return({recruit:'招集',scheme:'策略',prepare:'準備',none:'行動なし'})[t]}
+function selectCard(i){if(battle.selected.length>=4)return;battle.selected.push(battle.hand.splice(i,1)[0]);renderBattle()}
+$('#undo').onclick=()=>{if(!battle?.selected.length)return;battle.hand.push(battle.selected.pop());renderBattle()};$('#resolve').onclick=resolveTurn;
+function addLog(t,c=''){const x=document.createElement('div');x.className=c;x.textContent=t;$('#battleLog').appendChild(x);$('#battleLog').scrollTop=99999}
+function resolveTurn(){const b=battle,d=b.d,enemyActs=d.e.turns[b.turn-1];for(let i=0;i<4;i++){const pc=b.selected[i]?.type||'none',ec=enemyActs[i]||'none';let eSchemeBlocked=pc==='recruit'&&ec==='scheme',pSchemeBlocked=ec==='recruit'&&pc==='scheme';if(pc==='recruit'){b.power+=d.p.cha;addLog('自軍の招集：戦力 ＋'+d.p.cha,'good')}if(pc==='scheme'){if(pSchemeBlocked)addLog('自軍の策略は敵の招集に打開された');else{b.enemy-=d.p.int;addLog('自軍の策略：敵戦力 −'+d.p.int,'good')}}if(pc==='prepare'){b.prep++;addLog('自軍が準備 '+b.prep+'/'+d.p.cost);if(b.prep>=d.p.cost){b.prep=0;if(d.p.damage){b.enemy-=d.p.damage;addLog('《'+d.p.skill+'》敵戦力 −'+d.p.damage,'skill')}if(d.p.gain){b.power+=d.p.gain;addLog('《'+d.p.skill+'》戦力 ＋'+d.p.gain,'skill')}if(d.p.mult){b.decisive=true;addLog('《'+d.p.skill+'》決戦準備完了','skill')}}}if(ec==='recruit'){b.enemy+=d.e.cha;addLog('敵の招集：敵戦力 ＋'+d.e.cha,'bad')}if(ec==='scheme'){if(eSchemeBlocked)addLog('敵の策略を招集で打開した','good');else{b.power-=d.e.int;addLog('敵の策略：自軍戦力 −'+d.e.int,'bad')}}if(ec==='prepare'){b.enemyPrep++;addLog('敵が準備を行った');if(d.e.charge){if(pc==='recruit'){b.power-=300;addLog('《突撃》招集中を狙われ戦力 −300','bad')}if(pc==='prepare'){b.prep=Math.max(0,b.prep-1);addLog('《突撃》準備を1減少','bad')}}const hit=d.e.skillTurns?.find(x=>x[0]===b.turn-1&&x[1]===i);if(hit){b.power-=hit[2];addLog('敵の《ゲリラ戦術》：戦力 −'+hit[2],'bad')}}if(b.power<=0||b.enemy<=0)break}b.discard.push(...b.selected);b.selected=[];renderBattle();if(b.enemy<=0)return battleEnd(true);if(b.power<=0)return battleEnd(false);if(b.turn===3){let pp=b.power,ep=b.enemy;if(b.decisive)pp*=d.p.mult;if(d.e.mult)ep*=d.e.mult;addLog('決戦！ 自軍 '+Math.floor(pp)+' / 敵軍 '+Math.floor(ep),'skill');return battleEnd(pp>ep)}b.turn++;draw(4);renderBattle()}
+function battleEnd(win){const b=battle;$('#strategy').classList.add('hidden');const box=document.createElement('div');box.className='panel result';box.id='battleResult';box.innerHTML=win?'<h2 class="good">勝利</h2><p>戦術を身につけ、演習を突破した。</p><button class="btn" id="afterBattle">物語を続ける</button>':'<h2 class="bad">敗北</h2><p>'+b.d.lose+'</p><button class="btn" id="retry">もう一度挑戦</button>';$('#battle').appendChild(box);if(win)$('#afterBattle').onclick=()=>{document.querySelector('#battleResult')?.remove();$('#strategy').classList.remove('hidden');$('#battle').classList.add('hidden');sceneIndex++;renderScene()};else $('#retry').onclick=()=>{box.remove();$('#strategy').classList.remove('hidden');startBattle(b.tag)}}
+function finishDemo(){localStorage.removeItem(SAVE);$('#story').classList.add('hidden');$('#ending').classList.remove('hidden')}
+$('#newGame').onclick=()=>{sceneIndex=0;lessonDone=new Set();prepStep=0;renderScene()};$('#continueGame').onclick=()=>{const s=JSON.parse(localStorage.getItem(SAVE)||'{}');sceneIndex=s.sceneIndex||0;renderScene()};$('#next').onclick=advance;updateSaveLabel();
+</script></body></html>
