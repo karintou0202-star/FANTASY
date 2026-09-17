@@ -13,7 +13,7 @@ header{display:flex;gap:12px;justify-content:space-between;align-items:center;ma
 .btn{border:0;border-radius:10px;padding:11px 17px;background:var(--gold);color:#231a09;font-weight:900;cursor:pointer}.btn.secondary{background:#34445f;color:var(--text)}.btn:disabled{opacity:.4;cursor:not-allowed}
 .menu{display:grid;grid-template-columns:1fr 1fr;gap:12px}.menu button{min-height:105px;text-align:left}.menu b{font-size:18px}.menu span{display:block;margin-top:7px;font-size:13px;font-weight:500}
 @media(max-width:650px){.menu{grid-template-columns:1fr}header{align-items:flex-start;flex-direction:column}}
-.chapter{color:var(--gold);font-size:12px;font-weight:900;letter-spacing:.15em}.speaker{font-size:21px;font-weight:900;margin:10px 0 7px;transition:color .2s}.speaker.hero{color:#8fc0ff}.speaker.teacher{color:#ffd477}.speaker.strategist{color:#a9e6bd}.speaker.enemy{color:#ffaaaa}.speaker.narrator{color:#c5bdde;font-style:italic}.dialogue{font-size:17px;line-height:1.8;min-height:85px;white-space:pre-wrap}.stageDirection{min-height:26px;color:var(--muted);font-size:14px;font-style:italic;line-height:1.6;white-space:pre-wrap}
+.chapter{color:var(--gold);font-size:12px;font-weight:900;letter-spacing:.15em}.speaker{font-size:21px;font-weight:900;margin:10px 0 7px;transition:color .2s}.speaker.yellow,.battleSpeaker.yellow{color:#ffd477}.speaker.red,.battleSpeaker.red{color:#ff8d8d}.speaker.blue,.battleSpeaker.blue{color:#82b6ff}.speaker.green,.battleSpeaker.green{color:#87d9a6}.speaker.neutral,.battleSpeaker.neutral{color:#c5bdde}.speaker.narrator,.battleSpeaker.narrator{color:#c5bdde;font-style:italic}.dialogue{font-size:17px;line-height:1.8;min-height:85px;white-space:pre-wrap}.stageDirection{min-height:26px;color:var(--muted);font-size:14px;font-style:italic;line-height:1.6;white-space:pre-wrap}
 .storyPanel{position:relative;cursor:pointer;user-select:none}.storyPanel:focus-visible{outline:2px solid var(--gold);outline-offset:3px}.advanceMark{height:20px;text-align:right;color:var(--gold);font-size:15px;opacity:0}.advanceMark.show{opacity:1;animation:nextPulse .9s steps(2,end) infinite}@keyframes nextPulse{50%{transform:translateY(4px);opacity:.35}}@media(prefers-reduced-motion:reduce){.advanceMark.show{animation:none}}
 .portrait{height:8px;border-radius:9px;background:linear-gradient(90deg,var(--gold),transparent);margin-bottom:13px}.controls{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:16px}
 .lesson{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.lesson button{min-height:105px;background:#202c40;color:var(--text);border:1px solid var(--line);border-radius:12px;font-weight:900;cursor:pointer}.lesson button.done{border-color:var(--green);color:var(--green)}.lesson button.glow{box-shadow:0 0 0 2px var(--gold),0 0 24px #e7bd6555}.lesson button:disabled{opacity:.35}
@@ -57,11 +57,18 @@ const scenes=[
  ['幼き日の教え','カットール','ははは、良い子だ。では俺が戦闘の仕方を教えよう'],
  ['幼き日の教え','子ロイド','お父さん、ありがとう'],
  ['幼き日の教え','ロイド','昔はあんなにお父さん子だったな……'],
- ['幼き日の教え','カットール','では、コマンドの入力方法から教えるぞ。難しい事はない。8個のコマンドから4つを選ぶんだ'],
+ ['幼き日の教え','カットール','では、コマンドの入力方法から教えるぞ'],
+ ['幼き日の教え','子ロイド','う、うん'],
+ ['幼き日の教え','カットール','難しい事はない。8個のコマンドから4つを選ぶんだ'],
  ['幼き日の教え','子ロイド','どれを選べばいいか、分かんないよ～'],
- ['幼き日の教え','カットール','たしかに最初は分からんよな。まずは一つ選んでみなさい','LESSON'],
- ['幼き日の教え','カットール','ついに決戦の時が来たようだ。ここまでのおさらいだ。招集は戦力を増やし、策略から身を守る。策略は相手の戦力を減らす。準備は力を貯め、強力な特殊技能を使える'],
+ ['幼き日の教え','カットール','たしかに、最初はどれを選ぶか分からんよな。よしよし'],
+ ['幼き日の教え','カットール','まずは一つ選んでみなさい','LESSON'],
+ ['幼き日の教え','カットール','ついに決戦の時が来たようだ。ここまでのおさらいだ'],
+ ['幼き日の教え','カットール','招集は戦力を増やすぞ。また相手の策略から身を守ることができる'],
+ ['幼き日の教え','カットール','策略は相手の戦力を減らす。相手の戦力が0になれば勝利だ'],
+ ['幼き日の教え','カットール','準備は力を貯めて強力な特殊技能を使える。この聖剣のようにな'],
  ['幼き日の教え','カットール','今までの行動で十分戦力は溜まった。これなら決戦でも負けないな'],
+ ['幼き日の教え','カットール','決戦では戦力が高い方が勝つ。だが、相手の戦力を減らすことで有利にすることもあるな'],
  ['幼き日の教え','子ロイド','そうなんだ。お父さん行っちゃうの？'],
  ['幼き日の教え','カットール','決戦にはリスクが付きまとうが、息子よ。必ず勝利して来るからしばし待て'],
  ['幼き日の教え','子ロイド','お、お父さんー'],
@@ -72,11 +79,14 @@ const scenes=[
  ['ロウジャの策略講義','ロイド','でだ、演習の為にこんな山奥まで来たが……'],
  ['ロウジャの策略講義','オリンポス','あはは、たしかに山奥だね。この辺りにエルフの里があって、今回の講師はそこの人だよ'],
  ['ロウジャの策略講義','エルフの男性','おい、そこの止まれ'],
+ ['ロウジャの策略講義','ロイド','\n（無言で剣を抜こうとする）'],
  ['ロウジャの策略講義','オリンポス','あー、ダメダメ。エルフの里の方ですよね。ロウジャさん宛にお手紙が……'],
+ ['ロウジャの策略講義','エルフの男性','……。\n（手紙を受け取る）'],
  ['ロウジャの策略講義','エルフの男性','……しばし待たれよ。長老と連絡を取る'],
  ['ロウジャの策略講義','ロイド','何か殺気を感じた'],
  ['ロウジャの策略講義','オリンポス','はぁ……'],
  ['ロウジャの策略講義','オリンポス（心の声）','でもこの里、妙な噂があるんだよな……'],
+ ['ロウジャの策略講義','戦況','◆◆◆'],
  ['ロウジャの策略講義','ロイド','いつまで待たせるんだ。もう3時間になるぞ'],
  ['ロウジャの策略講義','オリンポス','エルフだしね。しばしなら3日ぐらいかかるかも'],
  ['ロウジャの策略講義','ロイド','げー。とりあえず熊でも取って来るか'],
@@ -95,8 +105,8 @@ const scenes=[
  ['ロウジャの策略講義','ロイド＆オリンポス','はぁ、はぁ……ありがとうございました'],
  ['ロウジャの策略講義','ロウジャ','良い学びを得たようじゃな。若人よ、戦略は奥が深い。ゆっくり育って行くのじゃよ'],
  ['ロウジャの策略講義','オリンポス','良かったね。これで策略戦術も……バッチリだね'],
- ['ロウジャの策略講義','ロイド','お、おう。まだなんか納得いかねぇ……','CHAPTER_TSUKUNE'],
- ['騎兵隊長ツクネ','ロイド','うわー、キツい……。はぁ、はぁ'],
+ ['ロウジャの策略講義','ロイド（心の声）','まだなんか納得いかねぇ……','CHAPTER_TSUKUNE'],
+ ['騎兵隊長ツクネ','ロイド','うわー、キツい。\n（息を切らしている）'],
  ['騎兵隊長ツクネ','オリンポス','たしかに今回はツクネさんとの演習だけど、ハードだね'],
  ['騎兵隊長ツクネ','ロイド','薪割り、荷物運び、あと筋トレ。こんなんで強くなれるのかよ……'],
  ['騎兵隊長ツクネ','ツクネ','こら、何を喋っている。この軟弱者め'],
@@ -133,7 +143,7 @@ const scenes=[
  ['騎兵隊長ツクネ','ロイド','んじゃ、俺が勝てたのは戦略で上回ったって感じか'],
  ['騎兵隊長ツクネ','アゾアラス','今回たまたまの可能性はあるがな'],
  ['騎兵隊長ツクネ','アゾアラス','では最後の講義は私が担当しよう。ついてきなさい'],
- ['騎兵隊長ツクネ','ロイド','アゾアラスの講義。どんな内容なんだ……','CHAPTER_KATTOL'],
+ ['騎兵隊長ツクネ','ロイド（心の声）','アゾアラスの講義。どんな内容なんだ……','CHAPTER_KATTOL'],
  ['父を越える戦い','ロイド','んー、基本的にはアゾアラスの戦術三原則に基づいてる感じだな'],
  ['父を越える戦い','オリンポス','そうだね。ちょっと変わった所だと、相手を侮ってはいけないってのもあるね。弱そうに見えた相手が最終局面で牙を剥いて来る時の怖さを伝える内容だ'],
  ['父を越える戦い','アゾアラス','基本とは普遍的な教えでなければならない。場合によって使い分けるものは基礎とは言うまい'],
@@ -147,7 +157,7 @@ const scenes=[
  ['父を越える戦い','アゾアラス','それで構わない'],
  ['父を越える戦い','カットール','試してやるよ。てめぇが勝ったら勇者になることを認める。負けたら家に帰る'],
  ['父を越える戦い','ロイド','諦めない。父さん、行くぞ','BATTLE_KATTOL'],
- ['父を越える戦い','ロイド','……勝った。\n（聖剣を投げ捨てた）'],
+ ['父を越える戦い','ロイド','……勝った'],
  ['父を越える戦い','カットール','ちっ、アゾアラスの入れ知恵か……'],
  ['父を越える戦い','カットール','ロイド！ てめぇはガキだ。上手くいかねぇ時もある。そういう時はすぐ戻ってこい'],
  ['父を越える戦い','カットール','アゾアラス、調子こいたら承知しねぇからな！'],
@@ -162,8 +172,10 @@ function save(){localStorage.setItem(SAVE,JSON.stringify({sceneIndex,currentChap
 function updateSaveLabel(){const s=localStorage.getItem(SAVE);$('#continueGame').disabled=!s;$('#saveText').textContent=s?'前回の場面から再開':'セーブデータなし'}
 function showStory(){['menu','battle','ending'].forEach(id=>$('#'+id).classList.add('hidden'));$('#story').classList.remove('hidden')}
 function renderProgress(){currentChapter=Math.max(0,chapters.indexOf(scenes[sceneIndex]?.[0]||chapters[3]));$('#progress').innerHTML=chapters.map((_,i)=>'<i class="'+(i<=currentChapter?'on':'')+'"></i>').join('')}
-function speakerTone(name){if(name.includes('心の声')||name==='ロイド')return name.includes('心の声')?'narrator':'hero';if(['カットール','アゾアラス','ツクネ'].includes(name))return 'teacher';if(['オリンポス','ロウジャ'].includes(name))return 'strategist';if(name.includes('？？？')||name.includes('エルフ'))return 'enemy';return 'hero'}
-function typeDialogue(speaker,text,cue=true){clearInterval(typingTimer);const lines=text.split('\n'),actions=lines.filter(x=>/^（.+）$/.test(x.trim())),spoken=lines.filter(x=>!/^（.+）$/.test(x.trim())).join('\n');typingText=spoken;typingAt=0;typing=true;typingCue=cue;$('#speaker').textContent=speaker;$('#speaker').className='speaker '+speakerTone(speaker);$('#dialogue').textContent='';$('#stageDirection').textContent=actions.join('\n');$('#advanceMark').classList.remove('show');$('#next').disabled=true;if(matchMedia('(prefers-reduced-motion: reduce)').matches){completeTyping();return}const chars=Array.from(spoken);typingTimer=setInterval(()=>{typingAt=Math.min(chars.length,typingAt+2);$('#dialogue').textContent=chars.slice(0,typingAt).join('');if(typingAt>=chars.length)completeTyping()},28)}
+function speakerTone(name){if(name.includes('心の声'))return 'narrator';if(name.includes('子ロイド')||name.includes('ロウジャ')||name.includes('アゾアラス')||name.includes('？？？'))return 'yellow';if(name.includes('カットール')||name.includes('ツクネ')||name.includes('エルフの男性'))return 'red';if(name==='ロイド'||name.startsWith('ロイド（')||name.includes('騎兵ロイド')||name.includes('聖剣ロイド'))return 'blue';if(name.includes('オリンポス'))return 'green';return 'neutral'}
+function colorSpeaker(el,name,base='speaker'){el.textContent=name;el.className=base+' '+speakerTone(name)}
+new MutationObserver(()=>document.querySelectorAll('#battleSpeaker,#forcedSpeaker').forEach(el=>{el.className='battleSpeaker '+speakerTone(el.textContent)})).observe(document.body,{subtree:true,childList:true,characterData:true});
+function typeDialogue(speaker,text,cue=true){clearInterval(typingTimer);const lines=text.split('\n'),actions=lines.filter(x=>/^（.+）$/.test(x.trim())),spoken=lines.filter(x=>!/^（.+）$/.test(x.trim())).join('\n');typingText=spoken;typingAt=0;typing=true;typingCue=cue;colorSpeaker($('#speaker'),speaker);$('#dialogue').textContent='';$('#stageDirection').textContent=actions.join('\n');$('#advanceMark').classList.remove('show');$('#next').disabled=true;if(matchMedia('(prefers-reduced-motion: reduce)').matches){completeTyping();return}const chars=Array.from(spoken);typingTimer=setInterval(()=>{typingAt=Math.min(chars.length,typingAt+2);$('#dialogue').textContent=chars.slice(0,typingAt).join('');if(typingAt>=chars.length)completeTyping()},28)}
 function completeTyping(){if(!typing)return;clearInterval(typingTimer);typing=false;$('#dialogue').textContent=typingText;$('#next').disabled=false;if(typingCue)$('#advanceMark').classList.add('show')}
 function renderScene(){showStory();const s=scenes[sceneIndex];if(!s)return finishDemo();renderProgress();$('#lessonHud').classList.add('hidden');$('#chapter').textContent=s[0];$('#storyExtra').innerHTML='';$('#next').classList.remove('hidden');$('#next').textContent='次へ';$('#next').onclick=advance;typeDialogue(s[1],s[2],true);if(s[3])handleTag(s[3]);save()}
 function handleTag(tag){if(tag==='LESSON'){typingCue=false;$('#advanceMark').classList.remove('show');renderLesson();return}if(tag==='SCRIPTED_LOWJA'){typingCue=false;$('#advanceMark').classList.remove('show');scriptedLowja();return}if(tag.startsWith('BATTLE_')){$('#next').textContent='演習開始';$('#next').onclick=()=>startBattle(tag);return}if(tag==='END'){$('#next').textContent='体験版を終える';$('#next').onclick=finishDemo;return}$('#next').textContent='次へ';$('#next').onclick=advance}
@@ -186,6 +198,7 @@ const lessonScripts={
  recruit:[
   ['子ロイド','これ、招集って何？'],
   ['カットール','招集は仲間を呼ぶコマンドだ。友達が集まって来ると考えれば良い'],
+  ['カットール','カリスマという値だけ、戦力を増加させるぞ'],
   {speaker:'子ロイド',text:'右の数字が360増えた！',powerDelta:360},
   ['カットール','ほうほう、なかなか筋が良いな。右の数字は戦力と言う。これが高い方が戦闘で有利になるんだ'],
   ['子ロイド','わー、なんか来た'],
@@ -199,6 +212,7 @@ const lessonScripts={
   ['カットール','良い子だ。じゃあ、次のコマンドも試してみよう']
  ],
  scheme:[
+  ['カットール','策略は知略を使い、相手の戦力を減少させる'],
   {speaker:'カットール',text:'本来、相手の戦力は見えないが、今回は特別に表示するぞ',revealEnemy:true},
   ['子ロイド','ほんとだ！ 相手も戦力を持ってるんだね！'],
   ['カットール','試しに策略を使ってみよう'],
@@ -217,7 +231,9 @@ const lessonScripts={
   ['カットール','例えば剣を振る時、力を溜めるだろ。あんな感じで力を蓄えるんだ。単体では意味のないことも多いが……'],
   ['カットール','もう一度選択してみるんだ'],
   {action:'もう一度準備する'},
-  {speaker:'子ロイド',text:'何！？ これ',powerDelta:1000},
+  ['戦況','特殊技能：聖剣　発動'],
+  {speaker:'戦況',text:'聖剣が光り輝き、戦力が1000上昇した。',powerDelta:1000},
+  ['子ロイド','何！？ これ'],
   ['カットール','これは聖剣だ。どうだ、すごいだろう'],
   ['子ロイド','か、かっこいい'],
   ['カットール','こんな感じで準備は強い行動を行うために必要なコマンドだ'],
@@ -262,7 +278,7 @@ const forcedHands=[
  ],
  [
   ['recruit','招集'],['recruit','招集'],['scheme','策略'],['scheme','策略'],
-  ['prepareL','準備（ロイド）'],['prepareL','準備（ロイド）'],['prepareO','準備（オリンポス）'],['prepareO','準備（オリンポス）']
+  ['scheme','策略'],['scheme','策略'],['prepareL','準備（ロイド）'],['prepareO','準備（オリンポス）']
  ]
 ];
 function forcedAllowed(type){if(forced.turn===1)return cmdBase(type)==='prepare';if(forced.turn===2)return type==='recruit';return true}
@@ -289,7 +305,7 @@ let queuedLogs=null;
 function appendLog(t,c=''){const x=document.createElement('div');x.className=c;x.textContent=t;$('#battleLog').appendChild(x);$('#battleLog').scrollTop=99999}
 function addLog(t,c=''){if(queuedLogs){queuedLogs.push({text:t,cls:c});return}appendLog(t,c)}
 function lineSpeaker(line){const t=line.text,d=battle.d;if(t.startsWith('敵')||t.includes('敵の《'))return d.e.name;if(t.startsWith('自軍')||t.startsWith('《'))return d.p.name;if(t.startsWith('実働'))return '実働 '+(battle.resolving.i+1);return '戦況'}
-function showBattleLine(line){$('#battleSpeaker').textContent=lineSpeaker(line);$('#battleMessage').textContent=line.text;$('#battleMessage').classList.remove('waiting');appendLog(line.text,line.cls)}
+function showBattleLine(line){colorSpeaker($('#battleSpeaker'),lineSpeaker(line),'battleSpeaker');$('#battleMessage').textContent=line.text;$('#battleMessage').classList.remove('waiting');appendLog(line.text,line.cls)}
 function resolveTurn(){const b=battle;b.resolving={i:0,enemyActs:b.d.e.turns[b.turn-1],messages:null,waitingFinalize:false};addLog('―― ターン'+b.turn+'・実働フェイズ開始 ――','skill');$('#battleSpeaker').textContent=b.d.e.name;$('#battleMessage').textContent=b.d.tips[b.turn-1];$('#stepAction').textContent='実働1を公開';renderBattle()}
 $('#stepAction').onclick=resolveAction;
 function resolveAction(){const b=battle,d=b.d,r=b.resolving;if(!r)return;if(r.messages&&r.messages.length){showBattleLine(r.messages.shift());$('#stepAction').textContent=r.messages.length?'次のメッセージ':'実働結果を確定';return}if(r.waitingFinalize){r.waitingFinalize=false;r.messages=null;r.i++;renderBattle();if(b.power<=0||b.enemy<=0||r.i>=4){finishResolvedTurn();return}$('#battleSpeaker').textContent='戦況';$('#battleMessage').textContent='次の実働を公開します。';$('#stepAction').textContent='実働'+(r.i+1)+'を公開';return}const i=r.i,pcRaw=b.selected[i]?.type||'none',pc=cmdBase(pcRaw),ec=r.enemyActs[i]||'none';queuedLogs=[];addLog('実働'+(i+1)+'公開｜自軍：'+nameCmd(pcRaw)+' ／ 敵軍：'+nameCmd(ec),'skill');const eSchemeBlocked=pc==='recruit'&&ec==='scheme',pSchemeBlocked=ec==='recruit'&&pc==='scheme';if(pc==='recruit'){b.power+=d.p.cha;addLog('自軍の招集：戦力 ＋'+d.p.cha,'good')}if(pc==='scheme'){if(pSchemeBlocked)addLog('自軍の策略は敵の招集に打開された');else{b.enemy-=d.p.int;addLog('自軍の策略：敵戦力 −'+d.p.int,'good')}}if(pc==='prepare'){const owner=d.p.prepareOwners?.[pcRaw];if(owner){b.prepUnits[pcRaw]=(b.prepUnits[pcRaw]||0)+1;addLog(owner+'が準備 '+b.prepUnits[pcRaw]+'/'+d.p.cost);if(b.prepUnits[pcRaw]>=d.p.cost){b.prepUnits[pcRaw]=0;b.enemy-=d.p.damage;addLog(owner+'の《'+d.p.skill+'》：敵戦力 −'+d.p.damage,'skill')}}else{b.prep++;addLog('自軍が準備 '+b.prep+'/'+d.p.cost);if(b.prep>=d.p.cost){b.prep=0;if(d.p.damage){b.enemy-=d.p.damage;addLog('《'+d.p.skill+'》敵戦力 −'+d.p.damage,'skill')}if(d.p.gain){b.power+=d.p.gain;addLog('《'+d.p.skill+'》戦力 ＋'+d.p.gain,'skill')}if(d.p.mult){b.decisive=true;addLog('《'+d.p.skill+'》決戦準備完了','skill')}}}}if(ec==='recruit'){b.enemy+=d.e.cha;addLog('敵の招集：敵戦力 ＋'+d.e.cha,'bad')}if(ec==='scheme'){if(eSchemeBlocked)addLog('敵の策略を招集で打開した','good');else{b.power-=d.e.int;addLog('敵の策略：自軍戦力 −'+d.e.int,'bad')}}if(ec==='prepare'){b.enemyPrep++;addLog('敵が準備を行った');if(d.e.charge){if(pc==='recruit'){b.power-=300;addLog('敵の《突撃》：招集中を狙われ戦力 −300','bad')}if(pc==='prepare'){if(d.p.prepareOwners?.[pcRaw])b.prepUnits[pcRaw]=Math.max(0,(b.prepUnits[pcRaw]||0)-1);else b.prep=Math.max(0,b.prep-1);addLog('敵の《突撃》：'+(d.p.prepareOwners?.[pcRaw]||'自軍')+'の準備を1減少','bad')}}const hit=d.e.skillTurns?.find(x=>x[0]===b.turn-1&&x[1]===i);if(hit){b.power-=hit[2];addLog('敵の《ゲリラ戦術》：戦力 −'+hit[2],'bad')}}r.messages=queuedLogs;queuedLogs=null;r.waitingFinalize=true;renderBattle();showBattleLine(r.messages.shift());$('#stepAction').textContent=r.messages.length?'次のメッセージ':'実働結果を確定'}
