@@ -68,7 +68,7 @@ select{width:100%;padding:12px;background:#111722;color:var(--text);border:1px s
 <header>
   <div>
     <h1>よくあるファンタジー世界のバトルゲーム</h1>
-    <div class="sub">NPC戦 試供版 v0.5・連戦モード搭載</div>
+    <div class="sub">NPC戦 試供版 v0.6・連戦モード搭載</div>
   </div>
   <div class="row"><a href="story.html" class="btn" style="text-decoration:none">ストーリー体験版</a><button id="resetBtn" class="btn secondary hidden">最初から</button></div>
 </header>
@@ -83,6 +83,7 @@ select{width:100%;padding:12px;background:#111722;color:var(--text);border:1px s
     <p><b class="lose">策略</b>：使用したユニットの知略の値だけ、相手の戦力を減らします。</p>
     <p><span class="sp"><b>準備</b></span>：準備が必要数に達すると、ユニットの特殊技能が発動します。</p>
     <p>3ターン後に戦力が高い方の勝利。途中で戦力が0以下になっても敗北します。</p>
+    <p><b>NPCの行動</b>：NPCには手札がなく、原則として対戦相手ごとの行動表に従います。コマンド破壊は現在ターンの4コマンドには影響せず、次ターン以降の予定1枠をランダムなコマンドへ変更します。</p>
   </div>
   <p class="small">自分のユニットを必ず2体選択してください。原則として同じユニットは選べません（バニラを除く）。</p>
   <div class="grid2">
@@ -157,8 +158,8 @@ select{width:100%;padding:12px;background:#111722;color:var(--text);border:1px s
 </div>
 
 <!-- 先にデータを読み込み、その後ゲーム本体を実行します -->
-<script src="characters.js?v=0.5"></script>
-<script src="npc.js?v=0.5.1"></script>
+<script src="characters.js?v=0.6"></script>
+<script src="npc.js?v=0.6"></script>
 
 <script>
 let G=null, timerId=null;
@@ -331,6 +332,32 @@ function randomNpcId(excludeId=null){
   return choices[Math.floor(Math.random()*choices.length)];
 }
 
+function randomNpcAction(units){
+  const unit=units[Math.floor(Math.random()*units.length)];
+  const types=['recruit','scheme','prepare'];
+  return [unit,types[Math.floor(Math.random()*types.length)]];
+}
+
+function buildNpcTurns(npc){
+  if(npc.randomActions){
+    return Array.from({length:3},()=>Array.from({length:4},()=>randomNpcAction(npc.units)));
+  }
+  return npc.turns.map(turn=>turn.map(action=>[...action]));
+}
+
+function replaceFutureNpcCommand(){
+  const candidates=[];
+  for(let turnIndex=G.turn;turnIndex<G.npcTurns.length;turnIndex++){
+    for(let actionIndex=0;actionIndex<4;actionIndex++)candidates.push([turnIndex,actionIndex]);
+  }
+  if(!candidates.length)return null;
+  const [turnIndex,actionIndex]=candidates[Math.floor(Math.random()*candidates.length)];
+  const before=G.npcTurns[turnIndex][actionIndex];
+  const after=randomNpcAction(G.npc.units);
+  G.npcTurns[turnIndex][actionIndex]=after;
+  return {turn:turnIndex+1,slot:actionIndex+1,before,after};
+}
+
 function start(){
   if($('#p1').value===$('#p2').value&&$('#p1').value!=='vanilla'){
     alert('同じユニットを2体選ぶことはできません。');
@@ -364,6 +391,7 @@ function startMatch(mode,npcId,run=null,selectedUnits=null){
     player:mkSide(playerUnits,false),
     enemy:mkSide(npc.units,true),
     npc,
+    npcTurns:buildNpcTurns(npc),
     deck,
     hand:deck.splice(0,8),
     selected:[],
@@ -509,13 +537,7 @@ async function resolveTurn(){
   G.enemy.mods.enemySchemeMult=1;
   G.enemy.mods.recruitMult=1;
 
-  const npcTurn=G.npc.randomActions
-    ?Array.from({length:4},()=>{
-      const unit=G.npc.units[Math.floor(Math.random()*G.npc.units.length)];
-      const types=['recruit','scheme','prepare'];
-      return [unit,types[Math.floor(Math.random()*types.length)]];
-    })
-    :G.npc.turns[G.turn-1];
+  const npcTurn=G.npcTurns[G.turn-1];
 
   const npcActions=npcTurn.map((x,i)=>({
     uid:`npc_${G.turn}_${i}`,
@@ -674,6 +696,18 @@ async function applySkill(side,opp,id,label){
       const v=effectiveStat(side,id,'power');
       opp.power-=v;
       body=`相手の現在戦力は <strong>${fmt(before)}</strong>！ さらに武力参照で <strong>-${fmt(v)}</strong>。`;
+      break;
+    }
+
+    case 'command_break':{
+      if(opp.isEnemy){
+        const changed=replaceFutureNpcCommand();
+        body=changed
+          ?`NPCの次ターン以降の予定コマンド1枠を、6種類のコマンドからランダムに再設定した。`
+          :'変更できる次ターン以降のコマンドがない。';
+      }else{
+        body='相手の手札にあるランダムなコマンド1枚を破壊した。';
+      }
       break;
     }
   }
