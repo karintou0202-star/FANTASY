@@ -191,6 +191,15 @@ function initSetup(){
   $('#p2').innerHTML=opts;
   $('#p1').value='tsukune';
   $('#p2').value='lowja';
+  if(new URLSearchParams(location.search).has('formation')){
+    try{
+      const saved=JSON.parse(localStorage.getItem('fantasyFormation'));
+      if(Array.isArray(saved)&&saved.length===2&&saved.every(id=>CHARS[id])){
+        $('#p1').value=saved[0];
+        $('#p2').value=saved[1];
+      }
+    }catch(e){}
+  }
 
   $('#npcSelect').innerHTML=Object.entries(NPCS)
     .map(([id,n])=>`<option value="${id}">${n.name}（${n.style}）</option>`)
