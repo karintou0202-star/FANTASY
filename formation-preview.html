@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>ユニット編成 UIプレビュー</title>
+<style>
+:root{--bg:#090d14;--panel:#151c28;--panel2:#1c2636;--line:#34445d;--text:#edf2fb;--muted:#aab5c7;--gold:#e7bd65;--blue:#73a9ff;--green:#82d8a3;--red:#ff9292}
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(#0c111a,#080b11);color:var(--text);font-family:system-ui,-apple-system,"Noto Sans JP",sans-serif;padding-bottom:92px}.wrap{width:min(1000px,100%);margin:auto;padding:16px}.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:14px}h1,h2,h3,p{margin-top:0}h1{font-size:clamp(23px,5vw,34px);margin-bottom:5px}.sub,.muted{color:var(--muted);font-size:13px}.summary{display:grid;grid-template-columns:1.3fr repeat(4,1fr);gap:8px}.summary>div{background:#0d131d;border:1px solid var(--line);border-radius:12px;padding:11px}.summary b{display:block;font-size:21px;margin-top:3px}.rarity.ok b{color:var(--gold)}.rarity.bad{border-color:var(--red);background:#29181d}.rarity.bad b{color:var(--red)}
+.slots{display:grid;grid-template-columns:1fr 1fr;gap:12px}.unitSlot{background:var(--panel2);border:2px solid var(--line);border-radius:14px;padding:14px;min-height:236px}.unitSlot.active{border-color:var(--gold);box-shadow:0 0 0 3px #e7bd6525}.slotHead{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:10px}.slotLabel{color:var(--gold);font-weight:900}.unitName{font-size:20px;font-weight:900}.badges{display:flex;gap:6px;flex-wrap:wrap;margin:7px 0}.badge{font-size:12px;background:#29364b;border:1px solid #425571;border-radius:999px;padding:3px 8px}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:10px 0}.stat{background:#111824;border-radius:9px;padding:8px;text-align:center}.stat span{display:block;color:var(--muted);font-size:11px}.stat b{font-size:17px}.skill,.trait{border-top:1px solid var(--line);padding-top:9px;margin-top:9px;font-size:13px;line-height:1.55}.skill strong{color:var(--gold)}.trait strong{color:var(--green)}
+.listHead{display:flex;align-items:end;justify-content:space-between;gap:8px}.unitList{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.unitBtn{appearance:none;text-align:left;color:var(--text);background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:11px;cursor:pointer;min-height:78px}.unitBtn.selected{border-color:var(--gold);background:#292619}.unitBtn:disabled{opacity:.38;cursor:not-allowed}.unitBtn b{display:block;font-size:15px}.unitBtn span{font-size:12px;color:var(--muted)}.unitBtn em{float:right;color:var(--gold);font-style:normal;font-weight:900}.commands{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.command{border-radius:12px;padding:12px;background:#0d131d;border:1px solid var(--line);text-align:center}.command span{display:block;color:var(--muted);font-size:12px}.command b{font-size:24px}.command.recruit b{color:var(--green)}.command.scheme b{color:var(--red)}.command.prepare b{color:var(--blue)}
+.warning{margin-top:12px;padding:10px 12px;border:1px solid var(--red);background:#29181d;color:#ffc2c2;border-radius:10px;font-weight:800}.hidden{display:none!important}.actionBar{position:fixed;z-index:5;left:0;right:0;bottom:0;background:#111722ee;border-top:1px solid var(--line);padding:10px max(12px,calc((100% - 1000px)/2)) calc(10px + env(safe-area-inset-bottom));backdrop-filter:blur(9px)}.actionRow{display:grid;grid-template-columns:1fr 2fr;gap:8px}.btn{border:0;border-radius:11px;min-height:50px;padding:10px 14px;background:var(--gold);color:#241b0c;font-weight:900;font-size:16px;cursor:pointer}.btn.secondary{background:#34445f;color:var(--text)}.btn:disabled{background:#3a3f48;color:#8d949f;cursor:not-allowed}
+@media(max-width:700px){.wrap{padding:10px}.panel{padding:12px}.summary{grid-template-columns:1fr 1fr}.summary>div:first-child{grid-column:1/-1}.slots{grid-template-columns:1fr}.unitList{grid-template-columns:1fr 1fr}.unitSlot{min-height:0}.actionBar{padding-left:8px;padding-right:8px}}
+</style>
+</head>
+<body>
+<main class="wrap">
+ <header class="panel"><h1>ユニット編成</h1><div class="sub">2体のユニットを選択してください</div></header>
+ <section class="panel">
+  <div class="summary">
+   <div><span class="muted">部隊初期戦力</span><b id="totalPower">0</b></div>
+   <div><span class="muted">武力合計</span><b id="totalPowerStat">0</b></div>
+   <div><span class="muted">カリスマ合計</span><b id="totalCharisma">0</b></div>
+   <div><span class="muted">知略合計</span><b id="totalIntel">0</b></div>
+   <div id="rarityBox" class="rarity ok"><span class="muted">合計レア度</span><b><span id="totalRarity">0</span> / 7</b></div>
+  </div>
+ </section>
+ <section class="panel"><h2>編成中のユニット</h2><div id="slots" class="slots"></div><div id="warning" class="warning hidden"></div></section>
+ <section class="panel">
+  <div class="listHead"><div><h2>ユニット一覧</h2><p class="muted">変更したい編成枠を押してからユニットを選択</p></div><span id="targetText" class="badge">1体目を選択中</span></div>
+  <div id="unitList" class="unitList"></div>
+ </section>
+ <section class="panel"><h2>コマンド総数</h2><div class="commands"><div class="command recruit"><span>招集</span><b id="recruitTotal">0</b></div><div class="command scheme"><span>策略</span><b id="schemeTotal">0</b></div><div class="command prepare"><span>準備</span><b id="prepareTotal">0</b></div></div></section>
+</main>
+<div class="actionBar"><div class="actionRow"><button class="btn secondary" onclick="history.back()">戻る</button><button id="startBtn" class="btn">この編成でNPC戦へ</button></div></div>
+<script src="characters.js?v=0.6"></script>
+<script>
+const $=s=>document.querySelector(s);
+const allowed=['tsukune','jackeen','lowja','ggg','guren','zazan','larin','crow','vanilla'];
+let formation=['tsukune','jackeen'];
+let target=0;
+const canDuplicate=c=>Boolean(c.trait&&c.trait.includes('2体'));
+const label=id=>CHARS[id].name.replace(/^[^・]+・/,'');
+function unitHTML(id,index){
+ const c=CHARS[id];
+ return `<article class="unitSlot ${target===index?'active':''}" data-slot="${index}">
+  <div class="slotHead"><span class="slotLabel">${index+1}体目</span><span class="badge">★${c.rarity}</span></div>
+  <div class="unitName">${c.name}</div><div class="badges"><span class="badge">${c.role}</span><span class="badge">${c.race}</span><span class="badge">初期戦力 ${c.power}</span></div>
+  <div class="stats"><div class="stat"><span>武力</span><b>${c.power}</b></div><div class="stat"><span>カリスマ</span><b>${c.charisma}</b></div><div class="stat"><span>知略</span><b>${c.intel}</b></div></div>
+  <div class="skill"><strong>特殊技能：${c.skill.name}</strong>（準備${c.skill.cost}）<br>${c.skill.text}</div>
+  <div class="trait"><strong>特性</strong><br>${c.trait||'なし'}</div>
+ </article>`;
+}
+function validate(){
+ const [a,b]=formation.map(id=>CHARS[id]);
+ if(!a||!b)return 'ユニットを2体選択してください。';
+ if(formation[0]===formation[1]&&!canDuplicate(a))return '同名ユニットを2体編成できるのは、許可する特性を持つユニットだけです。';
+ if(a.rarity+b.rarity>=8)return '合計レア度が8以上のため編成できません。7以下になるよう変更してください。';
+ return '';
+}
+function render(){
+ const chars=formation.map(id=>CHARS[id]).filter(Boolean);
+ $('#slots').innerHTML=formation.map(unitHTML).join('');
+ document.querySelectorAll('.unitSlot').forEach(el=>el.onclick=()=>{target=Number(el.dataset.slot);render()});
+ const sums={power:0,powerStat:0,charisma:0,intel:0,rarity:0,recruit:0,scheme:0,prepare:0};
+ chars.forEach(c=>{sums.power+=c.power;sums.powerStat+=c.power;sums.charisma+=c.charisma;sums.intel+=c.intel;sums.rarity+=c.rarity;for(const k of ['recruit','scheme','prepare'])sums[k]+=c.commands[k]});
+ $('#totalPower').textContent=sums.power;$('#totalPowerStat').textContent=sums.powerStat;$('#totalCharisma').textContent=sums.charisma;$('#totalIntel').textContent=sums.intel;$('#totalRarity').textContent=sums.rarity;
+ $('#recruitTotal').textContent=sums.recruit;$('#schemeTotal').textContent=sums.scheme;$('#prepareTotal').textContent=sums.prepare;
+ $('#targetText').textContent=`${target+1}体目を選択中`;
+ const error=validate();$('#warning').textContent=error;$('#warning').classList.toggle('hidden',!error);$('#startBtn').disabled=Boolean(error);$('#rarityBox').className='rarity '+(sums.rarity>=8?'bad':'ok');
+ $('#unitList').innerHTML=allowed.map(id=>{const c=CHARS[id];const duplicate=formation[1-target]===id&&!canDuplicate(c);return `<button class="unitBtn ${formation[target]===id?'selected':''}" data-id="${id}" ${duplicate?'disabled':''}><em>★${c.rarity}</em><b>${label(id)}</b><span>${c.role}・戦力${c.power}</span></button>`}).join('');
+ document.querySelectorAll('.unitBtn:not(:disabled)').forEach(btn=>btn.onclick=()=>{formation[target]=btn.dataset.id;target=target===0?1:0;render()});
+}
+$('#startBtn').onclick=()=>alert(`${formation.map(label).join(' ＋ ')}でNPC戦を開始（プレビュー）`);
+render();
+</script>
+</body>
+</html>
