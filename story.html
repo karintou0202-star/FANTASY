@@ -302,10 +302,13 @@ function forcedUndo(){if(!forced.selected.length||forced.resolving)return;forced
 function q(speaker,text,delta=0,enemyDelta=0,cls=''){forced.queue.push({speaker,text,delta,enemyDelta,cls})}
 function resolveForcedSelection(){forced.resolving=true;renderForcedHand();const cards=forced.selected.map(i=>forcedHands[forced.turn-1][i][0]);forced.queue=[];if(forced.turn===1){cards.forEach((type,i)=>{forced.prep[type]++;q('戦況','実働'+(i+1)+'｜'+(type==='prepareL'?'ロイド':'オリンポス')+'が準備。ロウジャの策略が命中した。',-200);if(forced.prep[type]===3){q(type==='prepareL'?'ロイド':'オリンポス','喧嘩殺法！',0,-600,'skill');q('ロウジャ','タイム、タイム、こら暴れるな。');q('ロイド','普通に倒せそうになったな……');q('戦況','演習を続けるため、ロウジャの戦力が回復した。',0,600)}});q('ロウジャ','策略は相手の準備中を狙う物じゃ。');q('ロイド','お前がやれって言ったんだろう。');q('戦況','次の説明のため、両者の準備状態をリセットした。')}else if(forced.turn===2){cards.forEach((type,i)=>{q('戦況','実働'+(i+1)+'｜招集で戦力が100増加。ロウジャは準備した。',100);if(i===2){q('ロウジャ','ちょい遅いっ。');q('戦況','ゲリラ戦術が発動した。',-800,0,'skill')}});q('オリンポス','最後に使える招集の枚数を考えて動いてよ。')}else{cards.forEach((type,i)=>{const base=cmdBase(type);if(base==='recruit'){q('戦況','実働'+(i+1)+'｜招集で戦力が100増加し、敵の策略を打開した。',100)}else if(base==='scheme'){q('戦況','実働'+(i+1)+'｜互いの策略が命中した。',-200,-200)}else{q('戦況','実働'+(i+1)+'｜準備中に敵の策略を受けた。',-200)}});q('ロイド','負けたー。');q('オリンポス','最後に相手へ抵抗するための招集が足りなかったんだよ。');q('ロウジャ','策略は招集には弱いが、招集が使えない相手には強さを発揮するのじゃ。')}$('#forcedConfirm').classList.add('hidden');$('#forcedUndo').classList.add('hidden');$('#forcedMessageNext').classList.remove('hidden');showForcedMessage()}
 function showForcedMessage(){const m=forced.queue.shift();if(!m){if(forced.turn===3){$('#forcedMessageNext').textContent='講義を続ける';$('#forcedMessageNext').onclick=advance;return}forced.turn++;forced.prep={prepareL:0,prepareO:0};$('#forcedConfirm').classList.remove('hidden');$('#forcedUndo').classList.remove('hidden');$('#forcedMessageNext').classList.add('hidden');$('#forcedMessageNext').textContent='次へ';$('#forcedMessageNext').onclick=showForcedMessage;beginForcedTurn();return}$('#forcedSpeaker').textContent=m.speaker;$('#forcedMessage').textContent=m.text;if(m.delta){forced.power=Math.max(0,forced.power+m.delta);$('#forcedPower').textContent=forced.power;$('#forcedFill').style.width=Math.max(0,forced.power/1400*100)+'%'}if(m.enemyDelta){forced.enemy=Math.max(0,forced.enemy+m.enemyDelta);$('#forcedEnemy').textContent=forced.enemy;$('#forcedEnemyFill').style.width=Math.max(0,forced.enemy/1400*100)+'%'}const row=document.createElement('div');row.className=m.cls||(m.delta<0?'bad':m.delta>0?'good':'');row.textContent=m.speaker+'｜'+m.text;$('#forcedLog').appendChild(row);$('#forcedLog').scrollTop=99999;$('#forcedMessageNext').textContent=forced.queue.length?'次へ':'ターン終了'}
+function finishScriptedLowja(){
+ clearInterval(typingTimer);typing=false;forced=null;sceneIndex++;renderScene();
+}
 showForcedMessage=function(){
  const m=forced.queue.shift();
  if(!m){
-  if(forced.turn===3){$('#forcedMessageNext').textContent='講義を続ける';$('#forcedMessageNext').onclick=advance;return}
+  if(forced.turn===3){$('#forcedMessageNext').classList.remove('hidden');$('#forcedMessageNext').textContent='講義を続ける';$('#forcedMessageNext').onclick=finishScriptedLowja;return}
   forced.turn++;forced.prep={prepareL:0,prepareO:0};
   $('#forcedConfirm').classList.remove('hidden');$('#forcedUndo').classList.remove('hidden');
   $('#forcedMessageNext').classList.add('hidden');$('#forcedMessageNext').textContent='次へ';
@@ -316,7 +319,11 @@ showForcedMessage=function(){
  if(m.enemyDelta){forced.enemy=Math.max(0,forced.enemy+m.enemyDelta);$('#forcedEnemy').textContent=forced.enemy;$('#forcedEnemyFill').style.width=Math.max(0,forced.enemy/1400*100)+'%'}
  const row=document.createElement('div');row.className=m.cls||(m.delta<0?'bad':m.delta>0?'good':'');row.textContent=m.speaker+'｜'+m.text;$('#forcedLog').appendChild(row);$('#forcedLog').scrollTop=99999;
  if(forced.turn===3&&forced.power<=0)forced.queue=forced.queue.filter(x=>x.speaker!=='戦況');
- $('#forcedMessageNext').textContent=forced.queue.length?'次へ':'ターン終了';
+ if(forced.turn===3&&!forced.queue.length){
+  $('#forcedMessageNext').classList.remove('hidden');$('#forcedMessageNext').textContent='講義を続ける';$('#forcedMessageNext').onclick=finishScriptedLowja;
+ }else{
+  $('#forcedMessageNext').textContent=forced.queue.length?'次へ':'ターン終了';
+ }
 }
 const beginForcedTurnBase=beginForcedTurn;
 beginForcedTurn=function(){beginForcedTurnBase();if($('#forcedSlots'))$('#forcedSlots').classList.remove('hidden');if($('#forcedHand'))$('#forcedHand').classList.remove('hidden');if($('#forcedLog')){$('#forcedLog').classList.add('hidden');$('#forcedLog').classList.remove('forcedLogFocus')}};
