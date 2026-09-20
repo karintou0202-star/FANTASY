@@ -32,7 +32,7 @@ select{width:100%;padding:12px;background:#111722;color:var(--text);border:1px s
 .commands{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;padding-top:8px;border-top:1px dashed var(--line)}
 .commandTag{padding:5px 8px;border-radius:8px;background:#111722;border:1px solid var(--line);font-size:12px;font-weight:800}
 .commandTag.recruit{color:var(--ok)}.commandTag.scheme{color:#ff8c8c}.commandTag.prepare{color:var(--blue)}
-.topbar{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center}
+.topbar{position:sticky;top:0;z-index:18;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;backdrop-filter:blur(9px)}
 .badge{background:#101722;border:1px solid var(--line);padding:8px 11px;border-radius:999px;font-size:13px}
 .big{font-weight:900;font-size:20px}.enemyPower{letter-spacing:.18em}
 .unitrow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
