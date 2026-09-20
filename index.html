@@ -52,7 +52,7 @@ select{width:100%;padding:12px;background:#111722;color:var(--text);border:1px s
 .stageTitle{font-size:clamp(20px,5vw,30px);font-weight:900;margin:8px 0}.stageBody{font-size:16px;line-height:1.75}
 .stageControls{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}.stageControls .btn{flex:1;min-width:110px}
 .logTitle{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:14px 0 8px}
-.log{height:250px;overflow:auto;background:#0d131d;border:1px solid var(--line);border-radius:12px;padding:12px;font-size:13px;line-height:1.65}
+.log{height:auto;min-height:110px;max-height:190px;overflow:auto;background:#0d131d;border:1px solid var(--line);border-radius:12px;padding:12px;font-size:13px;line-height:1.65}
 .log .sys{color:var(--muted)}.log .good{color:#91d5a7}.log .bad{color:#ff9696}.log .skilllog{color:#ffd479;font-weight:800}
 .log .cutin{margin:8px 0;padding:10px;border-left:4px solid var(--accent);background:#241f18;font-weight:800}
 .result{text-align:center;padding:26px}.result h2{font-size:34px;margin:0 0 10px}
@@ -61,7 +61,7 @@ select{width:100%;padding:12px;background:#111722;color:var(--text);border:1px s
 .streak{border-color:var(--accent);color:#ffe0a3}.streak .big{margin-left:4px}
 .rulesBox{margin:12px 0;padding:12px 14px;background:#111722;border:1px solid var(--line);border-radius:12px;line-height:1.65}
 .rulesBox h3{margin:0 0 6px}.rulesBox p{margin:4px 0}
-.battlePanel{transition:border-color .25s,background-color .25s,box-shadow .25s}.battlePanel.attention{border:2px solid var(--accent);background:#252417;box-shadow:0 0 0 3px #e6b85c44,0 0 28px #e6b85c50}.logNotice{margin:-2px 0 10px;padding:8px 10px;border-radius:8px;background:var(--accent);color:#1c1406;font-weight:900;text-align:center}.gameActionBar{position:fixed;z-index:20;left:0;right:0;bottom:0;background:#111722ee;border-top:1px solid var(--line);padding:10px max(12px,calc((100% - 1076px)/2)) calc(10px + env(safe-area-inset-bottom));backdrop-filter:blur(9px)}.gameActions{display:flex;justify-content:flex-end;gap:8px}.gameActions .btn{min-height:48px;min-width:140px}
+.battlePanel{transition:border-color .25s,background-color .25s}.gameActionBar{position:fixed;z-index:20;left:0;right:0;bottom:0;background:#111722ee;border-top:1px solid var(--line);padding:10px max(12px,calc((100% - 1076px)/2)) calc(10px + env(safe-area-inset-bottom));backdrop-filter:blur(9px)}.gameActions{display:flex;justify-content:flex-end;gap:8px}.gameActions .btn{min-height:48px;min-width:140px}
 .resultActions{position:fixed;z-index:20;left:0;right:0;bottom:0;display:flex;justify-content:center;gap:8px;background:#111722ee;border-top:1px solid var(--line);padding:10px max(12px,calc((100% - 1076px)/2)) calc(10px + env(safe-area-inset-bottom));backdrop-filter:blur(9px)}.resultActions .btn{min-height:48px;flex:1;max-width:520px}
 @media(max-width:760px){.gameActionBar{padding-left:8px;padding-right:8px}.gameActions{display:grid;grid-template-columns:1fr 1fr}.gameActions .btn{min-width:0;padding:8px 6px}#nextLogBtn:not(.hidden){grid-column:1/-1}.resultActions{padding-left:8px;padding-right:8px}}
 </style>
@@ -137,7 +137,6 @@ select{width:100%;padding:12px;background:#111722;color:var(--text);border:1px s
   </div>
 
   <div id="battlePanel" class="panel battlePanel hidden">
-    <div class="logNotice">戦闘ログに切り替わりました</div>
     <h3>戦闘</h3>
     <div id="battleStage" class="battleStage hidden">
       <div>
@@ -305,7 +304,10 @@ async function battleStep(kicker,title,body,kind='',historyCls=''){
   $('#stageKicker').textContent=kicker;
   $('#stageTitle').textContent=title;
   $('#stageBody').innerHTML=body;
-  log(`<b>${kicker}｜${title}</b><br>${body}`,historyCls);
+  const historyBody=document.createElement('div');
+  historyBody.innerHTML=body;
+  const historyText=historyBody.textContent.replace(/\s+/g,' ').trim();
+  log(`<b>${kicker}｜${title}</b>${historyText?`<br>${historyText}`:''}`,historyCls);
 
   if(logFlow.skip)return;
   if(logFlow.auto){
