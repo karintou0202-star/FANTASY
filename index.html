@@ -11,7 +11,7 @@
   --ok:#76c893; --blue:#6ea8fe;
 }
 *{box-sizing:border-box}
-body{margin:0;background:linear-gradient(180deg,#0d1117,#161d29);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI","Noto Sans JP",sans-serif;min-height:100vh}
+body{margin:0;background:linear-gradient(180deg,#0d1117,#161d29);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI","Noto Sans JP",sans-serif;min-height:100vh;padding-bottom:calc(82px + env(safe-area-inset-bottom))}
 button,select{font:inherit}
 .wrap{width:min(1100px,calc(100% - 24px));margin:18px auto 48px}
 header{display:flex;justify-content:space-between;gap:12px;align-items:flex-end;margin-bottom:16px}
@@ -61,6 +61,8 @@ select{width:100%;padding:12px;background:#111722;color:var(--text);border:1px s
 .streak{border-color:var(--accent);color:#ffe0a3}.streak .big{margin-left:4px}
 .rulesBox{margin:12px 0;padding:12px 14px;background:#111722;border:1px solid var(--line);border-radius:12px;line-height:1.65}
 .rulesBox h3{margin:0 0 6px}.rulesBox p{margin:4px 0}
+.battlePanel{transition:border-color .25s,background-color .25s,box-shadow .25s}.battlePanel.attention{border:2px solid var(--accent);background:#252417;box-shadow:0 0 0 3px #e6b85c44,0 0 28px #e6b85c50}.logNotice{margin:-2px 0 10px;padding:8px 10px;border-radius:8px;background:var(--accent);color:#1c1406;font-weight:900;text-align:center}.gameActionBar{position:fixed;z-index:20;left:0;right:0;bottom:0;background:#111722ee;border-top:1px solid var(--line);padding:10px max(12px,calc((100% - 1076px)/2)) calc(10px + env(safe-area-inset-bottom));backdrop-filter:blur(9px)}.gameActions{display:flex;justify-content:flex-end;gap:8px}.gameActions .btn{min-height:48px;min-width:140px}
+@media(max-width:760px){.gameActionBar{padding-left:8px;padding-right:8px}.gameActions{display:grid;grid-template-columns:1fr 2fr}.gameActions .btn{min-width:0}.gameActions .secondaryExtra{display:none}#nextLogBtn:not(.hidden){grid-column:1/-1}}
 </style>
 </head>
 <body>
@@ -128,14 +130,13 @@ select{width:100%;padding:12px;background:#111722;color:var(--text);border:1px s
       <h3 style="margin:0">戦略フェイズ</h3>
       <span class="small">手札から4枚を使用順に選択</span>
       <span class="spacer"></span>
-      <button id="undoBtn" class="btn secondary">1枚戻す</button>
     </div>
     <div id="selection" class="selection" style="margin:10px 0"></div>
     <div id="hand" class="hand"></div>
-    <div style="margin-top:12px"><button id="resolveBtn" class="btn" disabled>4枚を決定</button></div>
   </div>
 
-  <div class="panel">
+  <div id="battlePanel" class="panel battlePanel hidden">
+    <div class="logNotice">戦闘ログに切り替わりました</div>
     <h3>戦闘</h3>
     <div id="battleStage" class="battleStage hidden">
       <div>
@@ -143,15 +144,11 @@ select{width:100%;padding:12px;background:#111722;color:var(--text);border:1px s
         <div id="stageTitle" class="stageTitle">コマンド公開</div>
         <div id="stageBody" class="stageBody"></div>
       </div>
-      <div class="stageControls">
-        <button id="nextLogBtn" class="btn">▶ 次へ</button>
-        <button id="autoLogBtn" class="btn secondary">⏩ オート</button>
-        <button id="skipLogBtn" class="btn secondary">⏭ 一気に最後まで</button>
-      </div>
     </div>
     <div class="logTitle"><b>戦闘履歴</b><span class="small">上の演出を進めても履歴は残ります</span></div>
     <div id="log" class="log"></div>
   </div>
+  <div id="gameActionBar" class="gameActionBar hidden"><div class="gameActions"><button id="undoBtn" class="btn secondary">1枚戻す</button><button id="resolveBtn" class="btn" disabled>4枚を決定</button><button id="nextLogBtn" class="btn hidden">▶ 次へ</button><button id="autoLogBtn" class="btn secondary secondaryExtra hidden">⏩ オート</button><button id="skipLogBtn" class="btn secondary secondaryExtra hidden">⏭ 一気に最後まで</button></div></div>
 </section>
 
 <section id="result" class="panel result hidden"></section>
@@ -332,6 +329,29 @@ function randomNpcId(excludeId=null){
   return choices[Math.floor(Math.random()*choices.length)];
 }
 
+function showNpcCommandView(){
+  $('#battlePanel').classList.add('hidden');
+  $('#battlePanel').classList.remove('attention');
+  $('#strategyPanel').classList.remove('hidden');
+  $('#undoBtn').classList.remove('hidden');
+  $('#resolveBtn').classList.remove('hidden');
+  $('#nextLogBtn').classList.add('hidden');
+  $('#autoLogBtn').classList.add('hidden');
+  $('#skipLogBtn').classList.add('hidden');
+}
+
+function showNpcLogView(){
+  $('#strategyPanel').classList.add('hidden');
+  $('#battlePanel').classList.remove('hidden');
+  $('#battlePanel').classList.add('attention');
+  $('#undoBtn').classList.add('hidden');
+  $('#resolveBtn').classList.add('hidden');
+  $('#nextLogBtn').classList.remove('hidden');
+  $('#autoLogBtn').classList.remove('hidden');
+  $('#skipLogBtn').classList.remove('hidden');
+  setTimeout(()=>$('#battlePanel').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'center'}),40);
+}
+
 function randomNpcAction(units){
   const unit=units[Math.floor(Math.random()*units.length)];
   const types=['recruit','scheme','prepare'];
@@ -401,10 +421,11 @@ function startMatch(mode,npcId,run=null,selectedUnits=null){
   $('#setup').classList.add('hidden');
   $('#result').classList.add('hidden');
   $('#game').classList.remove('hidden');
+  $('#gameActionBar').classList.remove('hidden');
   $('#resetBtn').classList.remove('hidden');
   $('#log').innerHTML='';
   $('#battleStage').classList.add('hidden');
-  $('#strategyPanel').classList.remove('hidden');
+  showNpcCommandView();
   $('#streakBadge').classList.toggle('hidden',mode!=='streak');
   $('#streakCount').textContent=run?.wins||0;
 
@@ -525,7 +546,7 @@ function startTimer(){
 
 async function resolveTurn(){
   clearInterval(timerId);
-  $('#strategyPanel').classList.add('hidden');
+  showNpcLogView();
   logFlow.skip=false;
 
   await battleStep(`ターン${G.turn}`,'実働開始','選択した4枚のコマンドを順番に解決します。');
@@ -572,7 +593,7 @@ async function resolveTurn(){
   G.selected=[];
 
   $('#battleStage').classList.add('hidden');
-  $('#strategyPanel').classList.remove('hidden');
+  showNpcCommandView();
   render();
   startTimer();
 }
@@ -952,6 +973,7 @@ async function useDecisiveStep(side,label){
 function showResult(title,cls,msg){
   G.ended=true;
   $('#game').classList.add('hidden');
+  $('#gameActionBar').classList.add('hidden');
 
   const r=$('#result');
   r.classList.remove('hidden');
