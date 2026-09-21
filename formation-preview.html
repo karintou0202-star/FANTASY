@@ -33,10 +33,10 @@
  </section>
 </main>
 <div class="actionBar"><div class="actionRow"><button class="btn secondary" onclick="history.back()">戻る</button><button id="npcBtn" class="btn">NPC戦へ</button><button id="storyBtn" class="btn story">ストーリー攻略戦へ</button></div></div>
-<script src="characters.js?v=0.6"></script>
+<script src="characters.js?v=0.7"></script>
 <script>
 const $=s=>document.querySelector(s);
-const allowed=['tsukune','jackeen','lowja','ggg','guren','zazan','larin','crow','vanilla'];
+const allowed=['tsukune','jackeen','lowja','ggg','guren','zazan','larin','crow','vanilla','olympus','hero_lloyd','eiji'];
 let formation=['tsukune','jackeen'];
 let target=0;
 let page=1;
@@ -47,7 +47,7 @@ function unitHTML(id,index){
  const c=CHARS[id];
  return `<article class="unitSlot ${target===index?'active':''}" data-slot="${index}">
   <div class="slotHead"><span class="slotLabel">${index+1}体目</span><span class="badge">★${c.rarity}</span></div>
-  <div class="unitName">${c.name}</div><div class="badges"><span class="badge">${c.role}</span><span class="badge">${c.race}</span><span class="badge">初期戦力 ${c.power}</span></div>
+  <div class="unitName">${c.name}</div>${c.description?`<p class="muted">${c.description}</p>`:''}<div class="badges"><span class="badge">${c.role}</span><span class="badge">${c.race}</span><span class="badge">初期戦力 ${c.power}</span></div>
   <div class="stats"><div class="stat"><span>武力</span><b>${c.power}</b></div><div class="stat"><span>カリスマ</span><b>${c.charisma}</b></div><div class="stat"><span>知略</span><b>${c.intel}</b></div></div>
   <div class="skill"><strong>特殊技能：${c.skill.name}</strong>（準備${c.skill.cost}）<br>${c.skill.text}</div>
   <div class="trait"><strong>特性</strong><br>${c.trait||'なし'}</div>
