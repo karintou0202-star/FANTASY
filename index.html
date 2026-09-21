@@ -155,8 +155,8 @@ select{width:100%;padding:12px;background:#111722;color:var(--text);border:1px s
 </div>
 
 <!-- 先にデータを読み込み、その後ゲーム本体を実行します -->
-<script src="characters.js?v=0.7"></script>
-<script src="npc.js?v=0.6"></script>
+<script src="characters.js?v=0.8"></script>
+<script src="npc.js?v=0.7"></script>
 
 <script>
 let G=null, timerId=null;
@@ -267,7 +267,7 @@ function mkSide(ids,isEnemy=false){
     states:Object.fromEntries(ids.map(id=>[
       id,{sp:0,decisiveReady:false,revealed:!isEnemy,charismaMult:1}
     ])),
-    mods:{statMult:1,persistentStatMult:1,enemySchemeMult:1,recruitMult:1,damageTakenMult:1,powerGainMult:1,tacticsPending:false},
+    mods:{statMult:1,persistentStatMult:1,enemySchemeMult:1,recruitMult:1,damageTakenMult:1,powerGainMult:1,tacticsPending:false,tacticsUses:0},
     powerRevealed:false,
     isEnemy
   };
@@ -580,12 +580,14 @@ async function resolveTurn(){
   G.player.mods.damageTakenMult=1;
   G.player.mods.powerGainMult=1;
   G.player.mods.tacticsPending=false;
+  G.player.mods.tacticsUses=0;
   G.enemy.mods.statMult=1;
   G.enemy.mods.enemySchemeMult=1;
   G.enemy.mods.recruitMult=1;
   G.enemy.mods.damageTakenMult=1;
   G.enemy.mods.powerGainMult=1;
   G.enemy.mods.tacticsPending=false;
+  G.enemy.mods.tacticsUses=0;
 
   for(const side of [G.player,G.enemy]){
     const count=side.unitIds.filter(id=>CHARS[id].traitId==='persuasion').length;
@@ -742,7 +744,7 @@ async function applySkill(side,opp,id,label){
 
     case 'tactics':
       side.mods.tacticsPending=true;
-      body='次の実働から、このターン中の自軍戦力減少量と相手戦力上昇量を <strong>0.5倍</strong> にする。';
+      body='この実働の次の実働だけ、自軍戦力減少量と相手戦力上昇量を <strong>0.5倍</strong> にする。';
       break;
 
     case 'laser':
@@ -786,6 +788,8 @@ async function applySkill(side,opp,id,label){
 }
 
 async function resolvePair(pc,ec,n){
+  const playerTacticsActive=G.player.mods.tacticsUses>0;
+  const enemyTacticsActive=G.enemy.mods.tacticsUses>0;
   const ptxt=pc&&pc.unit
     ?`${unitDisplayName(G.player,pc.unit)}<br><strong>${cmdName(pc.type)}</strong>`
     :'空白';
@@ -901,8 +905,10 @@ async function resolvePair(pc,ec,n){
     }
   }
 
-  if(G.player.mods.tacticsPending){G.player.mods.damageTakenMult=.5;G.enemy.mods.powerGainMult=.5;G.player.mods.tacticsPending=false}
-  if(G.enemy.mods.tacticsPending){G.enemy.mods.damageTakenMult=.5;G.player.mods.powerGainMult=.5;G.enemy.mods.tacticsPending=false}
+  if(playerTacticsActive&&--G.player.mods.tacticsUses<=0){G.player.mods.damageTakenMult=1;G.enemy.mods.powerGainMult=1}
+  if(enemyTacticsActive&&--G.enemy.mods.tacticsUses<=0){G.enemy.mods.damageTakenMult=1;G.player.mods.powerGainMult=1}
+  if(G.player.mods.tacticsPending){G.player.mods.damageTakenMult=.5;G.enemy.mods.powerGainMult=.5;G.player.mods.tacticsUses=1;G.player.mods.tacticsPending=false}
+  if(G.enemy.mods.tacticsPending){G.enemy.mods.damageTakenMult=.5;G.player.mods.powerGainMult=.5;G.enemy.mods.tacticsUses=1;G.enemy.mods.tacticsPending=false}
   G.player.power=Math.floor(G.player.power);
   G.enemy.power=Math.floor(G.enemy.power);
   render();
