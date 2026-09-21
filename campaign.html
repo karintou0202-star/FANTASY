@@ -143,7 +143,7 @@ function finishStage(){
  maxUnlocked=Math.max(maxUnlocked,Math.min(STAGES.length,currentStageIndex+1));localStorage.setItem('fantasyCampaignUnlocked',String(maxUnlocked));
  $('#story').classList.add('hidden');$('#storyActions').classList.add('hidden');$('#battle').classList.add('hidden');$('#result').classList.remove('hidden');
  const hasNext=currentStageIndex<STAGES.length-1;
- $('#result').innerHTML=`<h2 class="win">${currentStage.label}クリア</h2><p>${currentStage.final?'章の物語をクリアしました。':'次の戦闘ストーリーが解放されました。'}</p><div class="resultActions">${hasNext?'<button id="nextStageBtn" class="btn">次の戦闘へ</button>':''}<button id="stageMenuBtn" class="btn secondary">戦闘選択へ</button></div>`;
+ $('#result').innerHTML=`<h2 class="win">${currentStage.label}クリア</h2><p>${currentStage.final?'章の物語をクリアしました。':'次の戦闘ストーリーが解放されました。'}</p><div class="resultActions"><button id="stageMenuBtn" class="btn secondary">戦闘選択へ</button>${hasNext?'<button id="nextStageBtn" class="btn">次の戦闘へ</button>':''}</div>`;
  if(hasNext)$('#nextStageBtn').onclick=()=>startStage(currentStageIndex+1);
  $('#stageMenuBtn').onclick=()=>{renderStageMenu();$('#result').classList.add('hidden');$('#menu').classList.remove('hidden')};
 }
