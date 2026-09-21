@@ -1,6 +1,6 @@
 // Fixed NPC action tables. Each turn contains four [unit, command] entries.
 const NPCS = {
-  guren_crow:{name:'紅蓮A＋クロウB',style:'戦力強化型',units:['guren','crow'],turns:[
+  guren_crow:{name:'紅蓮＋クロウ',style:'戦力強化型',units:['guren','crow'],turns:[
     [['guren','recruit'],['guren','recruit'],['guren','recruit'],['crow','prepare']],
     [['crow','prepare'],['crow','recruit'],['crow','recruit'],['crow','recruit']],
     [['guren','prepare'],['guren','scheme'],['guren','scheme'],['crow','scheme']]
@@ -65,17 +65,17 @@ const NPCS = {
     [['lowja','prepare'],['lowja','scheme'],['lowja','scheme'],['lowja','scheme']],
     [['lowja','scheme'],['jackeen','recruit'],['jackeen','recruit'],['jackeen','recruit']]
   ]},
-  larin_ggg:{name:'ラーリンA＋GGGB',style:'連鎖妨害型',units:['larin','ggg'],turns:[
+  larin_ggg:{name:'ラーリン＋GGG',style:'連鎖妨害型',units:['larin','ggg'],turns:[
     [['larin','prepare'],['larin','prepare'],['larin','recruit'],['larin','recruit']],
     [['ggg','prepare'],['ggg','prepare'],['ggg','prepare'],['ggg','prepare']],
     [['ggg','scheme'],['ggg','scheme'],['ggg','scheme'],['larin','recruit']]
   ]},
-  crow_ggg:{name:'クロウA＋GGGB',style:'強化策略型',units:['crow','ggg'],turns:[
+  crow_ggg:{name:'クロウ＋GGG',style:'強化策略型',units:['crow','ggg'],turns:[
     [['crow','recruit'],['crow','recruit'],['crow','recruit'],['crow','prepare']],
     [['crow','prepare'],['ggg','scheme'],['ggg','scheme'],['ggg','scheme']],
     [['ggg','prepare'],['ggg','prepare'],['ggg','prepare'],['ggg','prepare']]
   ]},
-  ggg_zazan:{name:'GGGA＋ザザンB',style:'妨害決戦型',units:['ggg','zazan'],turns:[
+  ggg_zazan:{name:'GGG＋ザザン',style:'妨害決戦型',units:['ggg','zazan'],turns:[
     [['ggg','prepare'],['ggg','prepare'],['ggg','prepare'],['ggg','prepare']],
     [['zazan','recruit'],['zazan','recruit'],['zazan','recruit'],['ggg','scheme']],
     [['zazan','prepare'],['zazan','prepare'],['zazan','prepare'],['ggg','scheme']]
