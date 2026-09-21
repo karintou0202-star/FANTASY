@@ -155,7 +155,7 @@ select{width:100%;padding:12px;background:#111722;color:var(--text);border:1px s
 </div>
 
 <!-- 先にデータを読み込み、その後ゲーム本体を実行します -->
-<script src="characters.js?v=0.6"></script>
+<script src="characters.js?v=0.7"></script>
 <script src="npc.js?v=0.6"></script>
 
 <script>
@@ -174,6 +174,7 @@ function charCard(c,displayName=c.name){
       <b>武力 ${c.power}</b><b>カリスマ ${c.charisma}</b><b>知略 ${c.intel}</b>
     </div>
     <div class="skill"><b>特殊技能：${c.skill.name}</b>　準備${c.skill.cost}<br>${c.skill.text}</div>
+    ${c.description?`<div class="small">${c.description}</div>`:''}
     <div class="trait"><b>特性：</b>${c.trait||'なし'}</div>
     <div class="commands">
       <span class="commandTag recruit">招集 ×${c.commands.recruit}</span>
@@ -264,9 +265,9 @@ function mkSide(ids,isEnemy=false){
     unitIds:ids,
     power:ids.reduce((s,id)=>s+CHARS[id].power,0),
     states:Object.fromEntries(ids.map(id=>[
-      id,{sp:0,decisiveReady:false,revealed:!isEnemy}
+      id,{sp:0,decisiveReady:false,revealed:!isEnemy,charismaMult:1}
     ])),
-    mods:{statMult:1,persistentStatMult:1,enemySchemeMult:1,recruitMult:1},
+    mods:{statMult:1,persistentStatMult:1,enemySchemeMult:1,recruitMult:1,damageTakenMult:1,powerGainMult:1,tacticsPending:false},
     powerRevealed:false,
     isEnemy
   };
@@ -454,8 +455,15 @@ $('#startBtn').onclick=start;
 $('#resetBtn').onclick=()=>location.reload();
 
 function effectiveStat(side,id,key){
-  return CHARS[id][key]*side.mods.statMult*side.mods.persistentStatMult;
+  const c=CHARS[id],partner=side.unitIds.find(unitId=>unitId!==id);
+  let bonus=0;
+  if(c.traitId==='protagonist'&&partner&&CHARS[partner].rarity<=3)bonus=key==='power'?100:(key==='charisma'||key==='intel'?50:0);
+  const growth=key==='charisma'?(side.states[id].charismaMult||1):1;
+  return (c[key]+bonus)*growth*side.mods.statMult*side.mods.persistentStatMult;
 }
+
+function gainPower(side,value){const actual=value*side.mods.powerGainMult;side.power+=actual;return actual}
+function reducePower(side,value){const actual=value*side.mods.damageTakenMult;side.power-=actual;return actual}
 
 function unitStateHTML(side,id){
   const c=CHARS[id],s=side.states[id];
@@ -569,9 +577,20 @@ async function resolveTurn(){
   G.player.mods.statMult=1;
   G.player.mods.enemySchemeMult=1;
   G.player.mods.recruitMult=1;
+  G.player.mods.damageTakenMult=1;
+  G.player.mods.powerGainMult=1;
+  G.player.mods.tacticsPending=false;
   G.enemy.mods.statMult=1;
   G.enemy.mods.enemySchemeMult=1;
   G.enemy.mods.recruitMult=1;
+  G.enemy.mods.damageTakenMult=1;
+  G.enemy.mods.powerGainMult=1;
+  G.enemy.mods.tacticsPending=false;
+
+  for(const side of [G.player,G.enemy]){
+    const count=side.unitIds.filter(id=>CHARS[id].traitId==='persuasion').length;
+    if(count){const v=gainPower(side,200*count);await battleStep('特性',`${side.isEnemy?'敵軍':'自軍'}「説得」`,`毎ターンの効果で戦力 <strong>+${fmt(v)}</strong>。`,'skill','skilllog')}
+  }
 
   const npcTurn=G.npcTurns[G.turn-1];
 
@@ -684,8 +703,8 @@ async function applySkill(side,opp,id,label){
   switch(c.skill.id){
     case 'guerrilla':{
       const v=effectiveStat(side,id,'intel')*1.5;
-      opp.power-=v;
-      body=`相手戦力を <strong>${fmt(v)}</strong> 減少。`;
+      const actual=reducePower(opp,v);
+      body=`相手戦力を <strong>${fmt(actual)}</strong> 減少。`;
       break;
     }
 
@@ -693,8 +712,8 @@ async function applySkill(side,opp,id,label){
       const v=side.unitIds.reduce(
         (s,u)=>s+effectiveStat(side,u,'charisma'),0
       )*1.2;
-      side.power+=v;
-      body=`両ユニットのカリスマを結集。戦力 <strong>+${fmt(v)}</strong>。`;
+      const actual=gainPower(side,v);
+      body=`両ユニットのカリスマを結集。戦力 <strong>+${fmt(actual)}</strong>。`;
       break;
     }
 
@@ -714,24 +733,32 @@ async function applySkill(side,opp,id,label){
       break;
 
     case 'vanilla_fist':
-      side.power+=800;
-      body='戦力 <strong>+800</strong>。';
+      body=`戦力 <strong>+${fmt(gainPower(side,800))}</strong>。`;
+      break;
+
+    case 'holy_sword':
+      body=`戦力 <strong>+${fmt(gainPower(side,1000))}</strong>。`;
+      break;
+
+    case 'tactics':
+      side.mods.tacticsPending=true;
+      body='次の実働から、このターン中の自軍戦力減少量と相手戦力上昇量を <strong>0.5倍</strong> にする。';
       break;
 
     case 'laser':
-      opp.power-=2000;
+      const actual=reducePower(opp,2000);
       for(const u of opp.unitIds){
         if(opp.states[u].sp>=1)opp.states[u].sp=0;
       }
-      body='相手戦力 <strong>-2,000</strong>。さらに準備1以上の相手ユニットの準備を0にする。';
+      body=`相手戦力 <strong>-${fmt(actual)}</strong>。さらに準備1以上の相手ユニットの準備を0にする。`;
       break;
 
     case 'recon':{
       opp.powerRevealed=true;
       const before=opp.power;
       const v=effectiveStat(side,id,'power');
-      opp.power-=v;
-      body=`相手の現在戦力は <strong>${fmt(before)}</strong>！ さらに武力参照で <strong>-${fmt(v)}</strong>。`;
+      const actual=reducePower(opp,v);
+      body=`相手の現在戦力は <strong>${fmt(before)}</strong>！ さらに武力参照で <strong>-${fmt(actual)}</strong>。`;
       break;
     }
 
@@ -798,13 +825,14 @@ async function resolvePair(pc,ec,n){
 
   if(pRecruit){
     const v=effectiveStat(G.player,pc.unit,'charisma')*G.player.mods.recruitMult;
-    G.player.power+=v;
+    const actual=gainPower(G.player,v);
+    if(CHARS[pc.unit].traitId==='otherworld_knowledge')G.player.states[pc.unit].charismaMult*=1.1;
     render();
 
     await battleStep(
       '招集',
       `自軍 ${unitDisplayName(G.player,pc.unit)}`,
-      `カリスマにより戦力 <strong>+${fmt(v)}</strong>。この実働中、敵の策略を防ぐ。`,
+      `カリスマにより戦力 <strong>+${fmt(actual)}</strong>。この実働中、敵の策略を防ぐ。${CHARS[pc.unit].traitId==='otherworld_knowledge'?`<br>「異世界知識」で自身のカリスマが <strong>${G.player.states[pc.unit].charismaMult.toFixed(2)}倍</strong>。`:''}`,
       'good',
       'good'
     );
@@ -812,7 +840,8 @@ async function resolvePair(pc,ec,n){
 
   if(eRecruit){
     const v=effectiveStat(G.enemy,ec.unit,'charisma')*G.enemy.mods.recruitMult;
-    G.enemy.power+=v;
+    gainPower(G.enemy,v);
+    if(CHARS[ec.unit].traitId==='otherworld_knowledge')G.enemy.states[ec.unit].charismaMult*=1.1;
     render();
 
     await battleStep(
@@ -835,13 +864,13 @@ async function resolvePair(pc,ec,n){
       );
     }else{
       const v=effectiveStat(G.player,pc.unit,'intel')*G.player.mods.enemySchemeMult;
-      G.enemy.power-=v;
+      const actual=reducePower(G.enemy,v);
       render();
 
       await battleStep(
         '策略',
         `自軍 ${unitDisplayName(G.player,pc.unit)}`,
-        `敵戦力 <strong>-${fmt(v)}</strong>。`,
+        `敵戦力 <strong>-${fmt(actual)}</strong>。`,
         'good',
         'good'
       );
@@ -859,19 +888,21 @@ async function resolvePair(pc,ec,n){
       );
     }else{
       const v=effectiveStat(G.enemy,ec.unit,'intel')*G.enemy.mods.enemySchemeMult;
-      G.player.power-=v;
+      const actual=reducePower(G.player,v);
       render();
 
       await battleStep(
         '策略',
         `敵軍 ${enemyName(ec.unit)}`,
-        `策略を受けた！ 自軍戦力 <strong class="big">-${fmt(v)}</strong>。`,
+        `策略を受けた！ 自軍戦力 <strong class="big">-${fmt(actual)}</strong>。`,
         'bad',
         'bad'
       );
     }
   }
 
+  if(G.player.mods.tacticsPending){G.player.mods.damageTakenMult=.5;G.enemy.mods.powerGainMult=.5;G.player.mods.tacticsPending=false}
+  if(G.enemy.mods.tacticsPending){G.enemy.mods.damageTakenMult=.5;G.player.mods.powerGainMult=.5;G.enemy.mods.tacticsPending=false}
   G.player.power=Math.floor(G.player.power);
   G.enemy.power=Math.floor(G.enemy.power);
   render();
