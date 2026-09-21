@@ -11,7 +11,7 @@
 <section id="battle" class="hidden"><div class="panel"><div id="battleTitle" class="chapter"></div><div class="unitProfiles"><div id="playerProfiles"></div><div id="enemyProfile"></div></div><div class="powerBoard"><div class="powerLane"><div class="powerHead"><span>自軍戦力</span><b id="playerPower">0</b></div><div class="bar"><div id="playerFill" class="fill"></div></div></div><div class="powerLane enemy"><div class="powerHead"><span>敵戦力</span><b id="enemyPower">0</b></div><div class="bar"><div id="enemyFill" class="fill"></div></div></div></div><div class="battleDialogue"><div id="battleSpeaker" class="battleSpeaker">戦況</div><div id="battleMessage" class="battleMessage">コマンドを選択してください。</div></div></div><div id="commandPanel" class="panel"><h3>ターン <span id="turn">1 / 3</span>　コマンドを4枚選択</h3><div id="selection" class="selection"></div><div id="hand" class="hand"></div></div><div id="logPanel" class="panel hidden"><h3>戦闘履歴</h3><div id="log" class="log"></div></div></section>
 <section id="result" class="panel result hidden"></section></main>
 <div id="storyActions" class="actionBar hidden"><button id="autoBtn" class="btn secondary">オート</button><button id="skipBtn" class="btn secondary">一括省略</button><button id="nextBtn" class="btn">次へ</button></div><div id="battleActions" class="battleActions hidden"><button id="undoBtn" class="btn secondary">1枚戻す</button><button id="resolveBtn" class="btn" disabled>4枚を決定</button><button id="campaignAutoBtn" class="btn utility hidden">オート</button><button id="campaignSkipBtn" class="btn utility hidden">一気に最後まで</button><button id="nextTurnBtn" class="btn hidden">次のターンへ</button></div>
-<script src="characters.js?v=0.7"></script><script>
+<script src="characters.js?v=0.8"></script><script>
 const $=s=>document.querySelector(s),cmdName={recruit:'招集',scheme:'策略',prepare:'準備'};
 let formation=['tsukune','jackeen'];try{const s=JSON.parse(localStorage.getItem('fantasyFormation'));if(Array.isArray(s)&&s.length===2&&s.every(id=>CHARS[id]))formation=s}catch(e){}if(formation[0]==='vanilla'&&formation[1]==='vanilla')formation=['vanilla','vanilla_clone'];
 const playerName=()=>formation.map(id=>CHARS[id].name).join(' ＋ ');
@@ -110,12 +110,14 @@ $('#campaignSkipBtn').onclick=()=>{
 };
 function resolveTurn(){
  clearInterval(campaignTimerId);const b=battle,acts=b.enemy.turns[b.turn-1],initialSnapshot=battleSnapshot();campaignLogQueue=[];campaignCollecting=true;
- b.playerStatMult=1;b.enemyStatMult=b.enemyStatMult||1;b.enemyRecruitMult=1;b.playerDamageMult=1;b.enemyGainMult=1;b.tacticsPending=false;addLog(`―― ターン${b.turn} ――`);
+ b.playerStatMult=1;b.enemyStatMult=b.enemyStatMult||1;b.enemyRecruitMult=1;b.playerDamageMult=1;b.enemyGainMult=1;b.tacticsPending=false;b.tacticsUses=0;addLog(`―― ターン${b.turn} ――`);
  for(let i=0;i<4;i++){
+  const tacticsActive=b.tacticsUses>0;
   const p=b.selected[i],e=acts[i],pc=CHARS[p.unit];addLog(`実働${i+1}｜自軍：${cmdName[p.type]} ／ 敵軍：${cmdName[e]}`,'skill');
   if(p.type==='recruit'){const gain=campaignStat(p.unit,'charisma')*b.playerStatMult;campaignGainPlayer(gain);addLog(`${pc.name}：招集 +${gain}`);if(pc.traitId==='otherworld_knowledge'){b.playerCharismaMult[p.unit]*=1.1;addLog(`${pc.name}の「異世界知識」：カリスマ ${b.playerCharismaMult[p.unit].toFixed(2)}倍`,'skill')}}else if(p.type==='scheme'){if(e==='recruit')addLog(`${pc.name}の策略は敵の招集に防がれた`);else{const damage=campaignStat(p.unit,'intel')*b.playerStatMult;b.enemyPower-=damage;addLog(`${pc.name}：策略 -${damage}`)}}else prepPlayer(p.unit);
   if(e==='recruit'){const gain=b.enemy.charisma*b.enemyStatMult*b.enemyRecruitMult*b.enemyGainMult;b.enemyPower+=gain;addLog(`${b.enemy.name}：招集 +${gain}`)}else if(e==='scheme'){if(p.type==='recruit')addLog(`${b.enemy.name}の策略を招集で防いだ`);else{const damage=campaignReducePlayer(b.enemy.intel*b.enemyStatMult);addLog(`${b.enemy.name}：策略 -${damage}`)}}else prepEnemy();
-  if(b.tacticsPending){b.playerDamageMult=.5;b.enemyGainMult=.5;b.tacticsPending=false;addLog('「戦術」の効果が次の実働から有効になった','skill')}
+  if(tacticsActive&&--b.tacticsUses<=0){b.playerDamageMult=1;b.enemyGainMult=1;addLog('「戦術」の効果が終了した','skill')}
+  if(b.tacticsPending){b.playerDamageMult=.5;b.enemyGainMult=.5;b.tacticsUses=1;b.tacticsPending=false;addLog('「戦術」の効果が次の実働だけ有効になった','skill')}
   if(b.playerPower<=0||b.enemyPower<=0)break;
  }
  b.selected=[];
@@ -142,7 +144,7 @@ function finishStage(){
  $('#stageMenuBtn').onclick=()=>{renderStageMenu();$('#result').classList.add('hidden');$('#menu').classList.remove('hidden')};
 }
 const startBattleTraitsBase=startBattle;
-startBattle=function(id){startBattleTraitsBase(id);battle.playerCharismaMult=Object.fromEntries(formation.map(unitId=>[unitId,1]));battle.playerDamageMult=1;battle.enemyGainMult=1;battle.tacticsPending=false;const count=formation.filter(unitId=>CHARS[unitId].traitId==='persuasion').length;if(count){campaignGainPlayer(200*count);addLog(`特性「説得」：戦力 +${200*count}`,'skill');renderBattle()}};
+startBattle=function(id){startBattleTraitsBase(id);battle.playerCharismaMult=Object.fromEntries(formation.map(unitId=>[unitId,1]));battle.playerDamageMult=1;battle.enemyGainMult=1;battle.tacticsPending=false;battle.tacticsUses=0;const count=formation.filter(unitId=>CHARS[unitId].traitId==='persuasion').length;if(count){campaignGainPlayer(200*count);addLog(`特性「説得」：戦力 +${200*count}`,'skill');renderBattle()}};
 const showCampaignCommandsTraitsBase=showCampaignCommands;
 showCampaignCommands=function(){const count=formation.filter(unitId=>CHARS[unitId].traitId==='persuasion').length;if(count){campaignGainPlayer(200*count);addLog(`特性「説得」：戦力 +${200*count}`,'skill')}showCampaignCommandsTraitsBase()};
 const renderCampaignHudBase=renderBattle;
