@@ -1,5 +1,10 @@
 // Fixed NPC action tables. Each turn contains four [unit, command] entries.
 const NPCS = {
+  guren_crow:{name:'紅蓮A＋クロウB',style:'戦力強化型',units:['guren','crow'],turns:[
+    [['guren','recruit'],['guren','recruit'],['guren','recruit'],['crow','prepare']],
+    [['crow','prepare'],['crow','recruit'],['crow','recruit'],['crow','recruit']],
+    [['guren','prepare'],['guren','scheme'],['guren','scheme'],['crow','scheme']]
+  ]},
   guren_lowja:{name:'紅蓮＋ロウジャ',style:'妨害型',units:['guren','lowja'],turns:[
     [['guren','prepare'],['lowja','scheme'],['guren','recruit'],['lowja','prepare']],
     [['lowja','prepare'],['guren','prepare'],['guren','recruit'],['lowja','scheme']],
