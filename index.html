@@ -836,7 +836,7 @@ async function resolvePair(pc,ec,n){
     await battleStep(
       '招集',
       `自軍 ${unitDisplayName(G.player,pc.unit)}`,
-      `カリスマにより戦力 <strong>+${fmt(actual)}</strong>。この実働中、敵の策略を防ぐ。${CHARS[pc.unit].traitId==='otherworld_knowledge'?`<br>「異世界知識」で自身のカリスマが <strong>${G.player.states[pc.unit].charismaMult.toFixed(2)}倍</strong>。`:''}`,
+      `カリスマにより戦力 <strong>+${fmt(actual)}</strong>。この実働中、敵の策略を防ぐ。${CHARS[pc.unit].traitId==='otherworld_knowledge'?`<br>「異世界知識」で自身のカリスマが <strong>${Number(G.player.states[pc.unit].charismaMult.toFixed(2))}倍</strong>。`:''}`,
       'good',
       'good'
     );
