@@ -127,6 +127,7 @@ select{width:100%;padding:12px;background:#111722;color:var(--text);border:1px s
       <h3 style="margin:0">戦略フェイズ</h3>
       <span class="small">手札から4枚を使用順に選択</span>
       <span class="spacer"></span>
+      <button id="foresightBtn" class="btn secondary hidden">見切り：8枚引き直す</button>
     </div>
     <div id="selection" class="selection" style="margin:10px 0"></div>
     <div id="hand" class="hand"></div>
@@ -151,7 +152,7 @@ select{width:100%;padding:12px;background:#111722;color:var(--text);border:1px s
 </div>
 
 <!-- 先にデータを読み込み、その後ゲーム本体を実行します -->
-<script src="characters.js?v=0.8"></script>
+<script src="characters.js?v=0.9"></script>
 <script src="npc.js?v=0.7"></script>
 
 <script>
@@ -170,7 +171,8 @@ function charCard(c,displayName=c.name){
       <b>武力 ${c.power}</b><b>カリスマ ${c.charisma}</b><b>知略 ${c.intel}</b>
     </div>
     <div class="skill"><b>特殊技能：${c.skill.name}</b>　準備${c.skill.cost}<br>${c.skill.text}</div>
-    ${c.description?`<div class="small">${c.description}</div>`:''}
+    ${c.description?`<div class="small">${c.description.replace(/\n/g,'<br>')}</div>`:''}
+    ${c.note?`<div class="small">${c.note}</div>`:''}
     <div class="trait"><b>特性：</b>${c.trait||'なし'}</div>
     <div class="commands">
       <span class="commandTag recruit">招集 ×${c.commands.recruit}</span>
@@ -409,6 +411,7 @@ function startMatch(mode,npcId,run=null,selectedUnits=null){
     deck,
     hand:deck.splice(0,8),
     selected:[],
+    foresightRemaining:playerUnits.filter(id=>CHARS[id].traitId==='foresight').length,
     ended:false
   };
 
@@ -493,7 +496,17 @@ function render(){
   document.querySelectorAll('.card').forEach(b=>b.onclick=()=>selectCard(+b.dataset.i));
   $('#resolveBtn').disabled=G.selected.length!==4;
   $('#undoBtn').disabled=!G.selected.length;
+  const canForesight=G.turn===1&&G.foresightRemaining>0&&G.selected.length===0;
+  $('#foresightBtn').classList.toggle('hidden',!canForesight);
+  if(canForesight)$('#foresightBtn').textContent=`見切り：8枚引き直す${G.foresightRemaining>1?`（残り${G.foresightRemaining}回）`:''}`;
 }
+
+$('#foresightBtn').onclick=()=>{
+  if(!G||G.turn!==1||G.foresightRemaining<=0||G.selected.length)return;
+  G.deck.push(...G.hand);G.hand=[];shuffle(G.deck);G.hand.push(...G.deck.splice(0,8));G.foresightRemaining--;
+  log('特性「見切り」：手札をすべてデッキに戻し、新しく8枚引いた。','skilllog');
+  render();startTimer();
+};
 
 function cmdName(t){
   return t==='recruit'?'招集':t==='scheme'?'策略':'準備';
@@ -642,10 +655,12 @@ async function prepStep(side,card,label){
   );
 }
 
-async function triggeredSkills(side,label){
+async function triggeredSkills(side,label,preparedUnit=null){
   let out=[];
 
   for(const id of side.unitIds){
+    // 必要値に達していても、そのユニット自身が準備を使った実働だけ発動判定する。
+    if(id!==preparedUnit)continue;
     const ch=CHARS[id],st=side.states[id];
 
     if(st.decisiveReady)continue;
@@ -742,6 +757,32 @@ async function applySkill(side,opp,id,label){
       break;
     }
 
+    case 'insider':
+      opp.powerRevealed=true;
+      body=`相手の現在戦力は <strong>${fmt(opp.power)}</strong>。`;
+      break;
+
+    case 'spy':{
+      opp.powerRevealed=true;
+      const ready=opp.unitIds.filter(u=>opp.states[u].sp>=1);
+      if(ready.length){
+        const target=ready[Math.floor(Math.random()*ready.length)];
+        opp.states[target].sp=0;
+        body=`相手の現在戦力は <strong>${fmt(opp.power)}</strong>。準備中の相手ユニット1体の準備を0にした。`;
+      }else body=`相手の現在戦力は <strong>${fmt(opp.power)}</strong>。準備が1以上の相手ユニットはいなかった。`;
+      break;
+    }
+
+    case 'mulligan':{
+      if(side===G.player){G.deck.push(...G.hand);G.hand=[];shuffle(G.deck);G.hand.push(...G.deck.splice(0,4));}
+      body=side===G.player?'残っている手札をデッキに戻し、新たに4枚引いた。':'手札を引き直した。';
+      if(side.power<opp.power){
+        const other=side.unitIds.find(u=>u!==id);
+        if(other&&!side.states[other].decisiveReady){side.states[other].sp++;body+=` さらに他ユニットの準備を1増加（この効果では特殊技能は発動しない）。`;}
+      }
+      break;
+    }
+
     case 'command_break':{
       if(opp.isEnemy){
         const changed=replaceFutureNpcCommand();
@@ -786,8 +827,8 @@ async function resolvePair(pc,ec,n){
   await prepStep(G.player,pc,'自軍');
   await prepStep(G.enemy,ec,'敵軍');
 
-  const ps=await triggeredSkills(G.player,'自軍');
-  const es=await triggeredSkills(G.enemy,'敵軍');
+  const ps=await triggeredSkills(G.player,'自軍',pc?.type==='prepare'?pc.unit:null);
+  const es=await triggeredSkills(G.enemy,'敵軍',ec?.type==='prepare'?ec.unit:null);
 
   // 同時発動した特殊技能は、ステータス低下を先に反映する。
   // 発動自体はすでに確定しているため、デバフや準備破壊では取り消されない。
