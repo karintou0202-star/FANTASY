@@ -37,8 +37,9 @@
 <script src="characters.js?v=0.8"></script>
 <script>
 const $=s=>document.querySelector(s);
-const allowed=['tsukune','jackeen','lowja','ggg','guren','zazan','larin','crow','vanilla','olympus','hero_lloyd','eiji'];
+const allowed=['tsukune','jackeen','lowja','ggg','guren','zazan','larin','crow','bonret','vanilla','olympus','hero_lloyd','eiji'];
 let formation=['tsukune','jackeen'];
+try{const saved=JSON.parse(localStorage.getItem('fantasyFormation'));if(Array.isArray(saved)&&saved.length===2&&saved.every(id=>allowed.includes(id)&&CHARS[id]))formation=saved}catch(e){}
 let target=0;
 let page=1;
 const pageSize=6;
@@ -80,12 +81,12 @@ function render(){
  const shown=filtered.slice((page-1)*pageSize,page*pageSize);
  $('#unitList').innerHTML=shown.length?shown.map(id=>{const c=CHARS[id];const duplicate=formation[1-target]===id&&!canDuplicate(c);return `<button class="unitBtn ${formation[target]===id?'selected':''}" data-id="${id}" ${duplicate?'disabled':''}><em>★${c.rarity}</em><b>${label(id)}</b><span>${c.role}・戦力${c.power}</span></button>`}).join(''):'<p class="muted">該当するユニットはいません。</p>';
  $('#pageText').textContent=`ページ ${page} / ${pages}`;$('#prevPage').disabled=page<=1;$('#nextPage').disabled=page>=pages;
- document.querySelectorAll('.unitBtn:not(:disabled)').forEach(btn=>btn.onclick=()=>{formation[target]=btn.dataset.id;target=target===0?1:0;render()});
+ document.querySelectorAll('.unitBtn:not(:disabled)').forEach(btn=>btn.onclick=()=>{formation[target]=btn.dataset.id;target=target===0?1:0;saveFormation();render()});
 }
 $('#unitSearch').oninput=()=>{page=1;render()};
 $('#prevPage').onclick=()=>{if(page>1){page--;render()}};
 $('#nextPage').onclick=()=>{page++;render()};
-function saveFormation(){localStorage.setItem('fantasyFormation',JSON.stringify(formation))}
+function saveFormation(){if(!validate())localStorage.setItem('fantasyFormation',JSON.stringify(formation))}
 $('#npcBtn').onclick=()=>{saveFormation();location.href='index.html?formation=1'};
 $('#storyBtn').onclick=()=>{saveFormation();location.href='campaign.html'};
 render();
