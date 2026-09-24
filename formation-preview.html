@@ -34,10 +34,10 @@
  </section>
 </main>
 <div class="actionBar"><div class="actionRow"><button class="btn secondary" onclick="history.back()">戻る</button><button id="npcBtn" class="btn">NPC戦へ</button><button id="storyBtn" class="btn story">ストーリー攻略戦へ</button></div></div>
-<script src="characters.js?v=0.8"></script>
+<script src="characters.js?v=0.9"></script>
 <script>
 const $=s=>document.querySelector(s);
-const allowed=['tsukune','jackeen','lowja','ggg','guren','zazan','larin','crow','bonret','vanilla','olympus','hero_lloyd','eiji'];
+const allowed=['tsukune','jackeen','lowja','ggg','guren','zazan','larin','crow','bonret','vanilla','olympus','hero_lloyd','eiji','solenarif','solenarif_spy','arle'];
 let formation=['tsukune','jackeen'];
 try{const saved=JSON.parse(localStorage.getItem('fantasyFormation'));if(Array.isArray(saved)&&saved.length===2&&saved.every(id=>allowed.includes(id)&&CHARS[id]))formation=saved}catch(e){}
 let target=0;
@@ -49,7 +49,7 @@ function unitHTML(id,index){
  const c=CHARS[id];
  return `<article class="unitSlot ${target===index?'active':''}" data-slot="${index}">
   <div class="slotHead"><span class="slotLabel">${index+1}体目</span><span class="badge">★${c.rarity}</span></div>
-  <div class="unitName">${c.name}</div>${c.description?`<p class="muted">${c.description}</p>`:''}<div class="badges"><span class="badge">${c.role}</span><span class="badge">${c.race}</span><span class="badge">初期戦力 ${c.power}</span></div>
+  <div class="unitName">${c.name}</div>${c.description?`<p class="muted">${c.description.replace(/\n/g,'<br>')}</p>`:''}${c.note?`<p class="muted">${c.note}</p>`:''}<div class="badges"><span class="badge">${c.role}</span><span class="badge">${c.race}</span><span class="badge">初期戦力 ${c.power}</span></div>
   <div class="stats"><div class="stat"><span>武力</span><b>${c.power}</b></div><div class="stat"><span>カリスマ</span><b>${c.charisma}</b></div><div class="stat"><span>知略</span><b>${c.intel}</b></div></div>
   <div class="unitCommands" aria-label="${c.name}のコマンド構成"><div class="unitCommand recruit"><span>招集</span><b>×${c.commands.recruit}</b></div><div class="unitCommand scheme"><span>策略</span><b>×${c.commands.scheme}</b></div><div class="unitCommand prepare"><span>準備</span><b>×${c.commands.prepare}</b></div></div>
   <div class="skill"><strong>特殊技能：${c.skill.name}</strong>（準備${c.skill.cost}）<br>${c.skill.text}</div>
