@@ -16,7 +16,7 @@
 <div id="storyActions" class="actionBar hidden"><button id="autoBtn" class="btn secondary">オート</button><button id="skipBtn" class="btn secondary">一括省略</button><button id="nextBtn" class="btn">次へ</button></div><div id="battleActions" class="battleActions hidden"><button id="undoBtn" class="btn secondary">1枚戻す</button><button id="resolveBtn" class="btn" disabled>4枚を決定</button><button id="campaignAutoBtn" class="btn utility hidden">オート</button><button id="campaignSkipBtn" class="btn utility hidden">一気に最後まで</button><button id="nextTurnBtn" class="btn hidden">次のターンへ</button></div>
 <script src="characters.js?v=0.9"></script><script src="campaign-chapters.js?v=0.1"></script><script>
 const $=s=>document.querySelector(s),cmdName={recruit:'招集',scheme:'策略',prepare:'準備'};
-let formation=['tsukune','jackeen'];try{const s=JSON.parse(localStorage.getItem('fantasyFormation'));if(Array.isArray(s)&&s.length===2&&s.every(id=>CHARS[id]))formation=s}catch(e){}if(formation[0]==='vanilla'&&formation[1]==='vanilla')formation=['vanilla','vanilla_clone'];
+let formation=['tsukune','jackeen'];try{const s=JSON.parse(localStorage.getItem('fantasyFormation'));if(Array.isArray(s)&&s.length===2&&s.every(id=>CHARS[id]))formation=s}catch(e){}if(formation[0]==='vanilla'&&formation[1]==='vanilla')formation=['vanilla','vanilla_clone'];if(CHARS[formation[0]].evolutionGroup&&CHARS[formation[0]].evolutionGroup===CHARS[formation[1]].evolutionGroup)formation=['tsukune','jackeen'];
 const playerName=()=>formation.map(id=>CHARS[id].name).join(' ＋ ');
 $('#formationInfo').innerHTML=`<b>現在の編成</b><br>${playerName()}`;
 
