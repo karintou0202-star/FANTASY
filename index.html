@@ -77,7 +77,7 @@ select{width:100%;padding:12px;background:#111722;color:var(--text);border:1px s
 </header>
 
 <section id="setup" class="panel">
-  <h2>部隊編成</h2>
+  <h2>NPC戦設定</h2>
   <div class="rulesBox">
     <h3>遊び方</h3>
     <p>ユニット2体の合計16枚で戦います。初手は8枚、次のターンから4枚補充し、毎ターン使う4枚を順番に選びます。</p>
@@ -88,11 +88,7 @@ select{width:100%;padding:12px;background:#111722;color:var(--text);border:1px s
     <p>3ターン後に戦力が高い方の勝利。途中で戦力が0以下になっても敗北します。</p>
     <p><b>NPCの行動</b>：NPCには手札がなく、原則として対戦相手ごとの行動表に従います。コマンド破壊は現在ターンの4コマンドには影響せず、次ターン以降の予定1枠をランダムなコマンドへ変更します。</p>
   </div>
-  <p class="small">自分のユニットを必ず2体選択してください。原則として同じユニットは選べません（バニラを除く）。</p>
-  <div class="grid2">
-    <div><label>自軍ユニットA</label><select id="p1"></select></div>
-    <div><label>自軍ユニットB</label><select id="p2"></select></div>
-  </div>
+  <div class="row"><h3 style="margin:0">現在の編成</h3><span class="spacer"></span><a href="formation-preview.html" class="btn secondary" style="text-decoration:none">編成画面に戻る</a></div>
   <div class="grid2">
     <div>
       <label>NPC戦モード</label>
@@ -159,7 +155,7 @@ select{width:100%;padding:12px;background:#111722;color:var(--text);border:1px s
 <script src="npc.js?v=0.7"></script>
 
 <script>
-let G=null, timerId=null;
+let G=null, timerId=null, setupFormation=['tsukune','lowja'];
 let logFlow={auto:false,skip:false,resolver:null};
 let npcSkipArmed=false,npcSkipTimer=null;
 const $=s=>document.querySelector(s);
@@ -185,22 +181,11 @@ function charCard(c,displayName=c.name){
 }
 
 function initSetup(){
-  const opts=Object.values(CHARS)
-    .filter(c=>c.selectable!==false)
-    .map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
-  $('#p1').innerHTML=opts;
-  $('#p2').innerHTML=opts;
-  $('#p1').value='tsukune';
-  $('#p2').value='lowja';
-  if(new URLSearchParams(location.search).has('formation')){
-    try{
-      const saved=JSON.parse(localStorage.getItem('fantasyFormation'));
-      if(Array.isArray(saved)&&saved.length===2&&saved.every(id=>CHARS[id])){
-        $('#p1').value=saved[0];
-        $('#p2').value=saved[1];
-      }
-    }catch(e){}
-  }
+  setupFormation=['tsukune','lowja'];
+  try{
+    const saved=JSON.parse(localStorage.getItem('fantasyFormation'));
+    if(Array.isArray(saved)&&saved.length===2&&saved.every(id=>CHARS[id]))setupFormation=saved;
+  }catch(e){}
 
   $('#npcSelect').innerHTML=Object.entries(NPCS)
     .map(([id,n])=>`<option value="${id}">${n.name}（${n.style}）</option>`)
@@ -211,7 +196,7 @@ function initSetup(){
 }
 
 function preview(){
-  const a=CHARS[$('#p1').value],b=CHARS[$('#p2').value];
+  const a=CHARS[setupFormation[0]],b=CHARS[setupFormation[1]];
   const duplicate=a.name===b.name;
   $('#preview').innerHTML=
     charCard(a,duplicate?`${a.name}A`:a.name)+
@@ -229,8 +214,6 @@ function updateNpcMode(){
       :'ランダムモード：登録済みの固定NPCデッキから1組がランダムに選ばれます。敵の正体は特殊技能発動まで伏せられます。';
 }
 
-$('#p1').onchange=preview;
-$('#p2').onchange=preview;
 $('#npcMode').onchange=updateNpcMode;
 
 function makeDeck(ids){
@@ -394,14 +377,9 @@ function replaceFutureNpcCommand(){
 }
 
 function start(){
-  if($('#p1').value===$('#p2').value&&$('#p1').value!=='vanilla'){
-    alert('同じユニットを2体選ぶことはできません。');
-    return;
-  }
-
   const mode=$('#npcMode').value;
   const npcId=mode==='fixed'?$('#npcSelect').value:randomNpcId();
-  const selectedUnits=normalizePlayerUnits([$('#p1').value,$('#p2').value]);
+  const selectedUnits=normalizePlayerUnits(setupFormation);
   const run=mode==='streak'
     ?{wins:0,lastNpcId:null,playerUnits:selectedUnits}
     :null;
@@ -410,7 +388,7 @@ function start(){
 }
 
 function startMatch(mode,npcId,run=null,selectedUnits=null){
-  const playerUnits=run?.playerUnits||selectedUnits||normalizePlayerUnits([$('#p1').value,$('#p2').value]);
+  const playerUnits=run?.playerUnits||selectedUnits||normalizePlayerUnits(setupFormation);
 
   const npc=NPCS[npcId];
   const deck=shuffle(makeDeck(playerUnits));
@@ -1043,10 +1021,9 @@ function showResult(title,cls,msg){
       <p class="big">現在 <span class="${canContinue?'win':'lose'}">${G.run.wins}連勝</span></p>
       <p class="small">今回の敵部隊：<b>${enemy}</b></p>
       ${canContinue?'':'<p>連戦終了。今回の記録は <b>'+G.run.wins+'勝</b>でした。</p>'}
-      <div class="resultActions">${canContinue?'<button id="nextStreakBtn" class="btn">次の対戦へ</button>':''}<button id="backSetupBtn" class="btn secondary">部隊編成へ戻る</button></div>
+      <div class="resultActions">${canContinue?'<button id="nextStreakBtn" class="btn">次の対戦へ</button>':''}<a href="formation-preview.html" class="btn secondary" style="text-decoration:none;text-align:center">編成画面に戻る</a></div>
     `;
 
-    $('#backSetupBtn').onclick=()=>location.reload();
     if(canContinue){
       $('#nextStreakBtn').onclick=()=>{
         const nextId=randomNpcId(G.run.lastNpcId);
