@@ -188,6 +188,8 @@ function initSetup(){
     const saved=JSON.parse(localStorage.getItem('fantasyFormation'));
     if(Array.isArray(saved)&&saved.length===2&&saved.every(id=>CHARS[id]))setupFormation=saved;
   }catch(e){}
+  const [savedA,savedB]=setupFormation.map(id=>CHARS[id]);
+  if(savedA.evolutionGroup&&savedA.evolutionGroup===savedB.evolutionGroup)setupFormation=['tsukune','lowja'];
 
   $('#npcSelect').innerHTML=Object.entries(NPCS)
     .map(([id,n])=>`<option value="${id}">${n.name}（${n.style}）</option>`)
