@@ -44,12 +44,13 @@ let target=0;
 let page=1;
 const pageSize=6;
 const canDuplicate=c=>Boolean(c.trait&&c.trait.includes('2体'));
-const label=id=>CHARS[id].name.replace(/^[^・]+・/,'');
+const formationName=c=>c.formationName||c.name;
+const label=id=>formationName(CHARS[id]).replace(/^[^・]+・/,'');
 function unitHTML(id,index){
  const c=CHARS[id];
  return `<article class="unitSlot ${target===index?'active':''}" data-slot="${index}">
   <div class="slotHead"><span class="slotLabel">${index+1}体目</span><span class="badge">★${c.rarity}</span></div>
-  <div class="unitName">${c.name}</div>${c.description?`<p class="muted">${c.description.replace(/\n/g,'<br>')}</p>`:''}${c.note?`<p class="muted">${c.note}</p>`:''}<div class="badges"><span class="badge">${c.role}</span><span class="badge">${c.race}</span><span class="badge">初期戦力 ${c.power}</span></div>
+  <div class="unitName">${formationName(c)}</div>${c.description?`<p class="muted">${c.description.replace(/\n/g,'<br>')}</p>`:''}${c.note?`<p class="muted">${c.note}</p>`:''}<div class="badges"><span class="badge">${c.role}</span><span class="badge">${c.race}</span><span class="badge">初期戦力 ${c.power}</span></div>
   <div class="stats"><div class="stat"><span>武力</span><b>${c.power}</b></div><div class="stat"><span>カリスマ</span><b>${c.charisma}</b></div><div class="stat"><span>知略</span><b>${c.intel}</b></div></div>
   <div class="unitCommands" aria-label="${c.name}のコマンド構成"><div class="unitCommand recruit"><span>招集</span><b>×${c.commands.recruit}</b></div><div class="unitCommand scheme"><span>策略</span><b>×${c.commands.scheme}</b></div><div class="unitCommand prepare"><span>準備</span><b>×${c.commands.prepare}</b></div></div>
   <div class="skill"><strong>特殊技能：${c.skill.name}</strong>（準備${c.skill.cost}）<br>${c.skill.text}</div>
@@ -60,6 +61,7 @@ function validate(){
  const [a,b]=formation.map(id=>CHARS[id]);
  if(!a||!b)return 'ユニットを2体選択してください。';
  if(formation[0]===formation[1]&&!canDuplicate(a))return '同名ユニットを2体編成できるのは、許可する特性を持つユニットだけです。';
+ if(a.evolutionGroup&&a.evolutionGroup===b.evolutionGroup)return '通常ユニットと同じ人物の真価ユニットは同時に編成できません。';
  if(a.rarity+b.rarity>=8)return '合計レア度が8以上のため編成できません。7以下になるよう変更してください。';
  return '';
 }
@@ -76,10 +78,10 @@ function render(){
  $('#targetText').textContent=`${target+1}体目を選択中`;
  const error=validate();$('#warning').textContent=error;$('#warning').classList.toggle('hidden',!error);$('#npcBtn').disabled=Boolean(error);$('#storyBtn').disabled=Boolean(error);$('#rarityBox').className='rarity '+(sums.rarity>=8?'bad':'ok');
  const query=$('#unitSearch').value.trim().toLowerCase();
- const filtered=allowed.filter(id=>{const c=CHARS[id];return !query||`${c.name} ${c.role} ${c.race}`.toLowerCase().includes(query)});
+ const filtered=allowed.filter(id=>{const c=CHARS[id];return !query||`${formationName(c)} ${c.name} ${c.role} ${c.race}`.toLowerCase().includes(query)});
  const pages=Math.max(1,Math.ceil(filtered.length/pageSize));page=Math.min(page,pages);
  const shown=filtered.slice((page-1)*pageSize,page*pageSize);
- $('#unitList').innerHTML=shown.length?shown.map(id=>{const c=CHARS[id];const duplicate=formation[1-target]===id&&!canDuplicate(c);return `<button class="unitBtn ${formation[target]===id?'selected':''}" data-id="${id}" ${duplicate?'disabled':''}><em>★${c.rarity}</em><b>${label(id)}</b><span>${c.role}・戦力${c.power}</span></button>`}).join(''):'<p class="muted">該当するユニットはいません。</p>';
+ $('#unitList').innerHTML=shown.length?shown.map(id=>{const c=CHARS[id],other=CHARS[formation[1-target]];const duplicate=formation[1-target]===id&&!canDuplicate(c),sameEvolution=Boolean(c.evolutionGroup&&other?.evolutionGroup===c.evolutionGroup);return `<button class="unitBtn ${formation[target]===id?'selected':''}" data-id="${id}" ${duplicate||sameEvolution?'disabled':''}><em>★${c.rarity}</em><b>${label(id)}</b><span>${c.role}・戦力${c.power}</span></button>`}).join(''):'<p class="muted">該当するユニットはいません。</p>';
  $('#pageText').textContent=`ページ ${page} / ${pages}`;$('#prevPage').disabled=page<=1;$('#nextPage').disabled=page>=pages;
  document.querySelectorAll('.unitBtn:not(:disabled)').forEach(btn=>btn.onclick=()=>{formation[target]=btn.dataset.id;target=target===0?1:0;saveFormation();render()});
 }
