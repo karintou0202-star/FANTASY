@@ -152,7 +152,7 @@ select{width:100%;padding:12px;background:#111722;color:var(--text);border:1px s
 </div>
 
 <!-- 先にデータを読み込み、その後ゲーム本体を実行します -->
-<script src="characters.js?v=0.16"></script>
+<script src="characters.js?v=0.17"></script>
 <script src="npc.js?v=0.7"></script>
 
 <script>
@@ -600,6 +600,8 @@ async function resolveTurn(){
   G.player.mods.infectionActive=false;G.player.mods.infectionIntel=0;
   G.enemy.mods.infectionActive=false;G.enemy.mods.infectionIntel=0;
 
+  for(const side of [G.player,G.enemy])for(const id of side.unitIds){const bonus=side.states[id].reassemblyBonuses?.[G.turn]||0;if(bonus){const actual=gainPower(side,bonus);await battleStep('特殊技能',`${side.isEnemy?'敵軍':'自軍'} ${unitDisplayName(side,id,side.isEnemy)}「再合体」`,`ターン開始時、戦力 <strong>+${fmt(actual)}</strong>。`,'skill','skilllog')}}
+
   for(const side of [G.player,G.enemy]){
     const count=side.unitIds.filter(id=>CHARS[id].traitId==='persuasion').length;
     if(count){const v=gainPower(side,200*count);await battleStep('特性',`${side.isEnemy?'敵軍':'自軍'}「説得」`,`毎ターンの効果で戦力 <strong>+${fmt(v)}</strong>。`,'skill','skilllog')}
@@ -815,9 +817,9 @@ async function applySkill(side,opp,id,label){
     case 'reassembly':{
       const state=side.states[id];
       if(!state.reassemblyUsed)state.reassemblyArmed=true;
-      state.reassemblyBonuses[G.actionCount+1]=(state.reassemblyBonuses[G.actionCount+1]||0)+1000;
-      state.reassemblyBonuses[G.actionCount+2]=(state.reassemblyBonuses[G.actionCount+2]||0)+500;
-      body=`${state.reassemblyUsed?'復帰効果はすでに使用済み。':'1回だけ戦力100で復帰する効果を待機。'} 次の実働開始時に戦力+1000、その次の実働開始時に+500。`;
+      state.reassemblyBonuses[G.turn+1]=(state.reassemblyBonuses[G.turn+1]||0)+1000;
+      state.reassemblyBonuses[G.turn+2]=(state.reassemblyBonuses[G.turn+2]||0)+500;
+      body=`${state.reassemblyUsed?'復帰効果はすでに使用済み。':'1回だけ戦力100で復帰する効果を待機。'} 次のターン開始時に戦力+1000、次の次のターン開始時に+500。`;
       break;
     }
 
@@ -895,7 +897,6 @@ async function applySkill(side,opp,id,label){
 
 async function resolvePair(pc,ec,n){
   G.actionCount++;
-  for(const side of [G.player,G.enemy])for(const id of side.unitIds){const bonus=side.states[id].reassemblyBonuses?.[G.actionCount]||0;if(bonus){const actual=gainPower(side,bonus);render();await battleStep('特殊技能',`${side.isEnemy?'敵軍':'自軍'} ${unitDisplayName(side,id,side.isEnemy)}「再合体」`,`実働開始時、戦力 <strong>+${fmt(actual)}</strong>。`,'skill','skilllog')}}
   const playerTacticsActive=G.player.mods.tacticsUses>0;
   const enemyTacticsActive=G.enemy.mods.tacticsUses>0;
   const ptxt=pc&&pc.unit
