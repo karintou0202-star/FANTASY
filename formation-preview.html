@@ -46,6 +46,8 @@ const pageSize=6;
 const canDuplicate=c=>Boolean(c.trait&&c.trait.includes('2体'));
 const formationName=c=>c.formationName||c.name;
 const label=id=>formationName(CHARS[id]).replace(/^[^・]+・/,'');
+const unitOrder=new Map(allowed.map((id,index)=>[id,index]));
+function sortUnits(ids){return [...ids].sort((a,b)=>CHARS[a].rarity-CHARS[b].rarity||(unitOrder.get(a)-unitOrder.get(b)))}
 function unitHTML(id,index){
  const c=CHARS[id];
  return `<article class="unitSlot ${target===index?'active':''}" data-slot="${index}">
@@ -78,7 +80,7 @@ function render(){
  $('#targetText').textContent=`${target+1}体目を選択中`;
  const error=validate();$('#warning').textContent=error;$('#warning').classList.toggle('hidden',!error);$('#npcBtn').disabled=Boolean(error);$('#storyBtn').disabled=Boolean(error);$('#rarityBox').className='rarity '+(sums.rarity>=8?'bad':'ok');
  const query=$('#unitSearch').value.trim().toLowerCase();
- const filtered=allowed.filter(id=>{const c=CHARS[id];return !query||`${formationName(c)} ${c.name} ${c.role} ${c.race}`.toLowerCase().includes(query)});
+ const filtered=sortUnits(allowed.filter(id=>{const c=CHARS[id];return !query||`${formationName(c)} ${c.name} ${c.role} ${c.race}`.toLowerCase().includes(query)}));
  const pages=Math.max(1,Math.ceil(filtered.length/pageSize));page=Math.min(page,pages);
  const shown=filtered.slice((page-1)*pageSize,page*pageSize);
  $('#unitList').innerHTML=shown.length?shown.map(id=>{const c=CHARS[id],other=CHARS[formation[1-target]];const duplicate=formation[1-target]===id&&!canDuplicate(c),sameEvolution=Boolean(c.evolutionGroup&&other?.evolutionGroup===c.evolutionGroup);return `<button class="unitBtn ${formation[target]===id?'selected':''}" data-id="${id}" ${duplicate||sameEvolution?'disabled':''}><em>★${c.rarity}</em><b>${label(id)}</b><span>${c.role}・戦力${c.power}</span></button>`}).join(''):'<p class="muted">該当するユニットはいません。</p>';
