@@ -152,7 +152,7 @@ select{width:100%;padding:12px;background:#111722;color:var(--text);border:1px s
 </div>
 
 <!-- 先にデータを読み込み、その後ゲーム本体を実行します -->
-<script src="characters.js?v=0.17"></script>
+<script src="characters.js?v=0.18"></script>
 <script src="npc.js?v=0.7"></script>
 
 <script>
@@ -817,9 +817,9 @@ async function applySkill(side,opp,id,label){
     case 'reassembly':{
       const state=side.states[id];
       if(!state.reassemblyUsed)state.reassemblyArmed=true;
-      state.reassemblyBonuses[G.turn+1]=(state.reassemblyBonuses[G.turn+1]||0)+1000;
-      state.reassemblyBonuses[G.turn+2]=(state.reassemblyBonuses[G.turn+2]||0)+500;
-      body=`${state.reassemblyUsed?'復帰効果はすでに使用済み。':'1回だけ戦力100で復帰する効果を待機。'} 次のターン開始時に戦力+1000、次の次のターン開始時に+500。`;
+      state.reassemblyBonuses[G.turn+1]=(state.reassemblyBonuses[G.turn+1]||0)+500;
+      state.reassemblyBonuses[G.turn+2]=(state.reassemblyBonuses[G.turn+2]||0)+1000;
+      body=`${state.reassemblyUsed?'復帰効果はすでに使用済み。':'1回だけ戦力100で復帰する効果を待機。'} 次のターン開始時に戦力+500、次の次のターン開始時に+1000。`;
       break;
     }
 
