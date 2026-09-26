@@ -152,7 +152,7 @@ select{width:100%;padding:12px;background:#111722;color:var(--text);border:1px s
 </div>
 
 <!-- 先にデータを読み込み、その後ゲーム本体を実行します -->
-<script src="characters.js?v=0.15"></script>
+<script src="characters.js?v=0.16"></script>
 <script src="npc.js?v=0.7"></script>
 
 <script>
@@ -423,6 +423,7 @@ function startMatch(mode,npcId,run=null,selectedUnits=null){
     hand:deck.splice(0,8),
     selected:[],
     foresightRemaining:playerUnits.filter(id=>CHARS[id].traitId==='foresight').length,
+    actionCount:0,
     powerFog:false,
     ended:false
   };
@@ -598,11 +599,6 @@ async function resolveTurn(){
   G.enemy.mods.tacticsPending=false;
   G.player.mods.infectionActive=false;G.player.mods.infectionIntel=0;
   G.enemy.mods.infectionActive=false;G.enemy.mods.infectionIntel=0;
-
-  for(const side of [G.player,G.enemy])for(const id of side.unitIds){
-    const bonus=side.states[id].reassemblyBonuses?.[G.turn]||0;
-    if(bonus){const actual=gainPower(side,bonus);await battleStep('特殊技能',`${side.isEnemy?'敵軍':'自軍'} ${unitDisplayName(side,id,side.isEnemy)}「再合体」`,`実働開始時、戦力 <strong>+${fmt(actual)}</strong>。`,'skill','skilllog')}
-  }
 
   for(const side of [G.player,G.enemy]){
     const count=side.unitIds.filter(id=>CHARS[id].traitId==='persuasion').length;
@@ -818,8 +814,10 @@ async function applySkill(side,opp,id,label){
 
     case 'reassembly':{
       const state=side.states[id];
-      if(state.reassemblyUsed)body='この戦闘ではすでに再合体を使用しているため、復帰効果は再使用できない。';
-      else{state.reassemblyArmed=true;body='分解・再合体を待機。1回だけ戦力が0以下になった時、戦力100で復帰する。';}
+      if(!state.reassemblyUsed)state.reassemblyArmed=true;
+      state.reassemblyBonuses[G.actionCount+1]=(state.reassemblyBonuses[G.actionCount+1]||0)+1000;
+      state.reassemblyBonuses[G.actionCount+2]=(state.reassemblyBonuses[G.actionCount+2]||0)+500;
+      body=`${state.reassemblyUsed?'復帰効果はすでに使用済み。':'1回だけ戦力100で復帰する効果を待機。'} 次の実働開始時に戦力+1000、その次の実働開始時に+500。`;
       break;
     }
 
@@ -896,6 +894,8 @@ async function applySkill(side,opp,id,label){
 }
 
 async function resolvePair(pc,ec,n){
+  G.actionCount++;
+  for(const side of [G.player,G.enemy])for(const id of side.unitIds){const bonus=side.states[id].reassemblyBonuses?.[G.actionCount]||0;if(bonus){const actual=gainPower(side,bonus);render();await battleStep('特殊技能',`${side.isEnemy?'敵軍':'自軍'} ${unitDisplayName(side,id,side.isEnemy)}「再合体」`,`実働開始時、戦力 <strong>+${fmt(actual)}</strong>。`,'skill','skilllog')}}
   const playerTacticsActive=G.player.mods.tacticsUses>0;
   const enemyTacticsActive=G.enemy.mods.tacticsUses>0;
   const ptxt=pc&&pc.unit
@@ -1051,7 +1051,7 @@ async function checkReassembly(side,label){
   if(side.power>0)return false;
   const id=side.unitIds.find(unitId=>{const state=side.states[unitId];return CHARS[unitId].skill.id==='reassembly'&&state.reassemblyArmed&&!state.reassemblyUsed});
   if(!id)return false;
-  const state=side.states[id];state.reassemblyArmed=false;state.reassemblyUsed=true;state.reassemblyBonuses[G.turn+1]=1000;state.reassemblyBonuses[G.turn+2]=500;side.power=100;render();
+  const state=side.states[id];state.reassemblyArmed=false;state.reassemblyUsed=true;side.power=100;render();
   await battleStep('特殊技能',`${label} ${unitDisplayName(side,id,side.isEnemy)}「分解、再合体」`,'戦力が0以下になったため分解して離脱。戦力 <strong>100</strong> で復帰した！','skill','skilllog');
   return true;
 }
