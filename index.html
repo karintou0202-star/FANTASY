@@ -832,7 +832,7 @@ async function applySkill(side,opp,id,label){
       break;
 
     case 'ice_magic':{
-      if(opp.isEnemy){const hit=destroyFutureNpcCommand();body=hit?`相手のターン${hit.turn}・${hit.slot}枠目の<strong>${cmdName(hit.type)}</strong>を破壊した。`:'破壊できる相手コマンドがなかった。';}
+      if(opp.isEnemy){const hit=replaceFutureNpcCommand();body=hit?`相手のターン${hit.turn}・${hit.slot}枠目に予定されていた<strong>${cmdName(hit.before[1])}</strong>を破壊し、ランダムなコマンドへ再設定した。`:'再設定できる次ターン以降のコマンドがなかった。';}
       else if(G.hand.length){const hit=G.hand.splice(Math.floor(Math.random()*G.hand.length),1)[0];body=`手札の「${unitDisplayName(G.player,hit.unit)}・${cmdName(hit.type)}」が破壊された。`;}
       else body='破壊できる相手コマンドがなかった。';
       break;
@@ -853,7 +853,7 @@ async function applySkill(side,opp,id,label){
 
     case 'blizzard':{
       if(side.isEnemy)G.powerFog=true;
-      if(opp.isEnemy){const hit=destroyFutureNpcCommand();body=hit?'相手の手札にあるコマンド1枚を、情報を伏せて破壊した。':'破壊できる相手コマンドがなかった。';}
+      if(opp.isEnemy){const hit=replaceFutureNpcCommand();body=hit?'相手の次ターン以降の予定コマンド1枠を、情報を伏せてランダムに再設定した。':'再設定できる次ターン以降のコマンドがなかった。';}
       else if(G.hand.length){G.hand.splice(Math.floor(Math.random()*G.hand.length),1);body='手札のコマンド1枚が、内容不明のまま破壊された。';}
       else body='破壊できる相手コマンドがなかった。';
       body='相手から双方の戦力表示を隠した。'+body;
