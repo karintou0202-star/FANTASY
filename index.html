@@ -152,7 +152,7 @@ select{width:100%;padding:12px;background:#111722;color:var(--text);border:1px s
 </div>
 
 <!-- 先にデータを読み込み、その後ゲーム本体を実行します -->
-<script src="characters.js?v=0.14"></script>
+<script src="characters.js?v=0.15"></script>
 <script src="npc.js?v=0.7"></script>
 
 <script>
@@ -252,7 +252,7 @@ function mkSide(ids,isEnemy=false){
     unitIds:ids,
     power:ids.reduce((s,id)=>s+CHARS[id].power,0),
     states:Object.fromEntries(ids.map(id=>[
-      id,{sp:0,decisiveReady:false,revealed:!isEnemy,charismaMult:1,statMult:1,reassemblyArmed:false,reassemblyUsed:false,reassemblyBonuses:{}}
+      id,{sp:0,decisiveReady:false,revealed:!isEnemy,charismaMult:1,statMult:1,soloCount:0,curtainCallReady:false,reassemblyArmed:false,reassemblyUsed:false,reassemblyBonuses:{}}
     ])),
     mods:{statMult:1,persistentStatMult:1,enemySchemeMult:1,recruitMult:1,damageTakenMult:1,powerGainMult:1,tacticsPending:false,tacticsUses:0,infectionActive:false,infectionIntel:0},
     powerRevealed:false,
@@ -626,6 +626,10 @@ async function resolveTurn(){
     const floor=side.unitIds.reduce((sum,id)=>sum+effectiveStat(side,id,'power'),0);
     if(side.power<floor){side.power=floor;await battleStep('特性',`${side.isEnemy?'敵軍':'自軍'}「マスコット」`,`ターン終了時、戦力を全ユニットの武力合計 <strong>${fmt(floor)}</strong> に変更。`,'skill','skilllog')}
   }
+  for(const [side,cards,label] of [[G.player,G.selected,'自軍'],[G.enemy,npcActions,'敵軍']]){
+    const id=side.unitIds.find(unitId=>CHARS[unitId].traitId==='solo_stage'&&cards.length===4&&cards.every(card=>card?.unit===unitId));
+    if(id){const state=side.states[id];state.statMult*=1.3;state.soloCount++;if(state.soloCount>=3)state.curtainCallReady=true;await battleStep('特性',`${label} ${unitDisplayName(side,id,side.isEnemy)}「独壇場」`,`自身の全ステータスが1.3倍。発動回数 <strong>${state.soloCount} / 3</strong>${state.curtainCallReady?'<br>決戦スキル「カーテンコール」を獲得！':''}`,'skill','skilllog')}
+  }
 
   await battleStep(
     `ターン${G.turn}`,
@@ -860,6 +864,14 @@ async function applySkill(side,opp,id,label){
       break;
     }
 
+    case 'shakariki':
+      if(side===G.player){
+        const stamp=`kurukku_${G.turn}_${Date.now()}`;
+        G.hand=[{uid:`${stamp}_r1`,unit:id,type:'recruit'},{uid:`${stamp}_r2`,unit:id,type:'recruit'},{uid:`${stamp}_s1`,unit:id,type:'scheme'},{uid:`${stamp}_s2`,unit:id,type:'scheme'}];
+        body='手札をクルックの招集×2、策略×2に変更した。';
+      }else body='手札を招集×2、策略×2に変更した。';
+      break;
+
     case 'command_break':{
       if(opp.isEnemy){
         const changed=replaceFutureNpcCommand();
@@ -1078,6 +1090,9 @@ async function finalBattle(){
     'skilllog'
   );
 
+  await useCurtainCall(G.player,'自軍');
+  await useCurtainCall(G.enemy,'敵軍');
+
   if(G.player.power>=G.enemy.power){
     await useDecisiveStep(G.player,'自軍');
     await useDecisiveStep(G.enemy,'敵軍');
@@ -1111,6 +1126,14 @@ async function finalBattle(){
     cls,
     `最終戦力　自軍 ${fmt(G.player.power)} / 敵軍 ${fmt(G.enemy.power)}`
   );
+}
+
+async function useCurtainCall(side,label){
+  const id=side.unitIds.find(unitId=>side.states[unitId].curtainCallReady);
+  if(!id)return;
+  side.states[id].curtainCallReady=false;
+  const gain=effectiveStat(side,id,'power')*3;side.power+=gain;render();
+  await battleStep('決戦スキル',`${label} ${unitDisplayName(side,id,side.isEnemy)}「カーテンコール」`,`武力の3.0倍、戦力 <strong>+${fmt(gain)}</strong>。`,'skill','skilllog');
 }
 
 async function useDecisiveStep(side,label){
