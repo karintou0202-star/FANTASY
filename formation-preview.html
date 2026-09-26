@@ -34,10 +34,10 @@
  </section>
 </main>
 <div class="actionBar"><div class="actionRow"><button class="btn secondary" onclick="history.back()">戻る</button><button id="npcBtn" class="btn">NPC戦へ</button><button id="storyBtn" class="btn story">ストーリー攻略戦へ</button></div></div>
-<script src="characters.js?v=0.11"></script>
+<script src="characters.js?v=0.12"></script>
 <script>
 const $=s=>document.querySelector(s);
-const allowed=['tsukune','jackeen','lowja','ggg','guren','zazan','larin','crow','bonret','vanilla','olympus','hero_lloyd','eiji','solenarif','solenarif_spy','arle','gasshaan','donbura','anmi'];
+const allowed=['tsukune','jackeen','lowja','ggg','guren','zazan','larin','crow','bonret','vanilla','olympus','hero_lloyd','eiji','solenarif','solenarif_spy','arle','gasshaan','donbura','anmi','azoaras','gigagald','hikake','coco'];
 let formation=['tsukune','jackeen'];
 try{const saved=JSON.parse(localStorage.getItem('fantasyFormation'));if(Array.isArray(saved)&&saved.length===2&&saved.every(id=>allowed.includes(id)&&CHARS[id]))formation=saved}catch(e){}
 let target=0;
