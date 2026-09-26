@@ -152,7 +152,7 @@ select{width:100%;padding:12px;background:#111722;color:var(--text);border:1px s
 </div>
 
 <!-- 先にデータを読み込み、その後ゲーム本体を実行します -->
-<script src="characters.js?v=0.11"></script>
+<script src="characters.js?v=0.12"></script>
 <script src="npc.js?v=0.7"></script>
 
 <script>
@@ -252,7 +252,7 @@ function mkSide(ids,isEnemy=false){
     unitIds:ids,
     power:ids.reduce((s,id)=>s+CHARS[id].power,0),
     states:Object.fromEntries(ids.map(id=>[
-      id,{sp:0,decisiveReady:false,revealed:!isEnemy,charismaMult:1,reassemblyArmed:false,reassemblyUsed:false,reassemblyBonuses:{}}
+      id,{sp:0,decisiveReady:false,revealed:!isEnemy,charismaMult:1,statMult:1,reassemblyArmed:false,reassemblyUsed:false,reassemblyBonuses:{}}
     ])),
     mods:{statMult:1,persistentStatMult:1,enemySchemeMult:1,recruitMult:1,damageTakenMult:1,powerGainMult:1,tacticsPending:false,tacticsUses:0,infectionActive:false,infectionIntel:0},
     powerRevealed:false,
@@ -380,6 +380,15 @@ function replaceFutureNpcCommand(){
   return {turn:turnIndex+1,slot:actionIndex+1,before,after};
 }
 
+function destroyFutureNpcCommand(){
+  const candidates=[];
+  for(let turnIndex=G.turn;turnIndex<G.npcTurns.length;turnIndex++)for(let actionIndex=0;actionIndex<4;actionIndex++)if(G.npcTurns[turnIndex][actionIndex][1]!=='blank')candidates.push([turnIndex,actionIndex]);
+  if(!candidates.length)return null;
+  const [turnIndex,actionIndex]=candidates[Math.floor(Math.random()*candidates.length)],before=G.npcTurns[turnIndex][actionIndex];
+  G.npcTurns[turnIndex][actionIndex]=[before[0],'blank'];
+  return {turn:turnIndex+1,slot:actionIndex+1,unit:before[0],type:before[1]};
+}
+
 function start(){
   const mode=$('#npcMode').value;
   const npcId=mode==='fixed'?$('#npcSelect').value:randomNpcId();
@@ -414,8 +423,14 @@ function startMatch(mode,npcId,run=null,selectedUnits=null){
     hand:deck.splice(0,8),
     selected:[],
     foresightRemaining:playerUnits.filter(id=>CHARS[id].traitId==='foresight').length,
+    powerFog:false,
     ended:false
   };
+
+  for(const side of [G.player,G.enemy]){
+    if(side.unitIds.some(id=>CHARS[id].traitId==='wise_general'))(side.isEnemy?G.player:G.enemy).powerRevealed=true;
+    if(side.unitIds.some(id=>CHARS[id].traitId==='love'))for(const id of side.unitIds)side.states[id].sp++;
+  }
 
   $('#setup').classList.add('hidden');
   $('#result').classList.add('hidden');
@@ -430,6 +445,8 @@ function startMatch(mode,npcId,run=null,selectedUnits=null){
 
   log(`${mode==='streak'?`連戦 ${run.wins+1}戦目。`:''}対戦開始。敵部隊の正体は <b>？？？</b>。`,'sys');
   log(`自軍初期戦力：<b>${fmt(G.player.power)}</b>`,'good');
+  if(G.player.unitIds.some(id=>CHARS[id].traitId==='wise_general'))log('特性「智将」：相手の戦力を公開。','skilllog');
+  if(G.player.unitIds.some(id=>CHARS[id].traitId==='love'))log('特性「恋心」：全ユニットの準備 +1（特殊技能は発動しない）。','skilllog');
   render();
   startTimer();
 }
@@ -442,11 +459,11 @@ function effectiveStat(side,id,key){
   let bonus=0;
   if(c.traitId==='protagonist'&&partner&&CHARS[partner].rarity<=3)bonus=key==='power'?100:(key==='charisma'||key==='intel'?50:0);
   const growth=key==='charisma'?(side.states[id].charismaMult||1):1;
-  return (c[key]+bonus)*growth*side.mods.statMult*side.mods.persistentStatMult;
+  return (c[key]+bonus)*growth*(side.states[id].statMult||1)*side.mods.statMult*side.mods.persistentStatMult;
 }
 
 function gainPower(side,value){const actual=value*side.mods.powerGainMult;side.power+=actual;return actual}
-function reducePower(side,value){const actual=value*side.mods.damageTakenMult;side.power-=actual;return actual}
+function reducePower(side,value){let actual=value*side.mods.damageTakenMult;if(side.unitIds.some(id=>CHARS[id].traitId==='reckless'))actual*=actual<=999?.5:1.5;side.power-=actual;return actual}
 
 function unitStateHTML(side,id){
   const c=CHARS[id],s=side.states[id];
@@ -474,8 +491,8 @@ function unitStateHTML(side,id){
 
 function render(){
   $('#turnNo').textContent=G.turn;
-  $('#playerPower').textContent=fmt(G.player.power);
-  $('#enemyPower').textContent=G.enemy.powerRevealed?fmt(G.enemy.power):'????';
+  $('#playerPower').textContent=G.powerFog?'????':fmt(G.player.power);
+  $('#enemyPower').textContent=!G.powerFog&&G.enemy.powerRevealed?fmt(G.enemy.power):'????';
 
   $('#playerUnits').innerHTML=G.player.unitIds.map(id=>unitStateHTML(G.player,id)).join('');
   $('#enemyUnits').innerHTML=G.enemy.unitIds.map(id=>unitStateHTML(G.enemy,id)).join('');
@@ -511,7 +528,7 @@ $('#foresightBtn').onclick=()=>{
 };
 
 function cmdName(t){
-  return t==='recruit'?'招集':t==='scheme'?'策略':'準備';
+  return t==='recruit'?'招集':t==='scheme'?'策略':t==='prepare'?'準備':'破壊済み';
 }
 
 function cmdDetail(c){
@@ -607,11 +624,16 @@ async function resolveTurn(){
     if(G.ended)return;
   }
 
+  for(const side of [G.player,G.enemy])if(side.unitIds.some(id=>CHARS[id].traitId==='mascot')){
+    const floor=side.unitIds.reduce((sum,id)=>sum+effectiveStat(side,id,'power'),0);
+    if(side.power<floor){side.power=floor;await battleStep('特性',`${side.isEnemy?'敵軍':'自軍'}「マスコット」`,`ターン終了時、戦力を全ユニットの武力合計 <strong>${fmt(floor)}</strong> に変更。`,'skill','skilllog')}
+  }
+
   await battleStep(
     `ターン${G.turn}`,
     'ターン終了',
-    `自軍戦力 <b>${fmt(G.player.power)}</b>${
-      G.enemy.powerRevealed
+    `自軍戦力 <b>${G.powerFog?'????':fmt(G.player.power)}</b>${
+      !G.powerFog&&G.enemy.powerRevealed
         ?` / 敵軍戦力 <b>${fmt(G.enemy.power)}</b>`
         :' / 敵軍戦力 <b>????</b>'
     }`
@@ -811,6 +833,35 @@ async function applySkill(side,opp,id,label){
       body=`このターン中、相手が招集を使うたび、相手戦力を <strong>${fmt(side.mods.infectionIntel)}</strong> 減少させる。`;
       break;
 
+    case 'ice_magic':{
+      if(opp.isEnemy){const hit=destroyFutureNpcCommand();body=hit?`相手のターン${hit.turn}・${hit.slot}枠目の<strong>${cmdName(hit.type)}</strong>を破壊した。`:'破壊できる相手コマンドがなかった。';}
+      else if(G.hand.length){const hit=G.hand.splice(Math.floor(Math.random()*G.hand.length),1)[0];body=`手札の「${unitDisplayName(G.player,hit.unit)}・${cmdName(hit.type)}」が破壊された。`;}
+      else body='破壊できる相手コマンドがなかった。';
+      break;
+    }
+
+    case 'grandstand':{
+      side.mods.damageTakenMult*=1.5;opp.mods.damageTakenMult*=1.5;
+      const actual=reducePower(opp,effectiveStat(side,id,'intel')*1.7);
+      body=`このターン中、双方の戦力減少量を1.5倍にする。さらに相手戦力を <strong>-${fmt(actual)}</strong>。`;
+      break;
+    }
+
+    case 'mysterious_spell':{
+      const actual=reducePower(side,300);side.states[id].statMult*=2;
+      body=`自軍戦力 <strong>-${fmt(actual)}</strong>。自身の武力・カリスマ・知略を<strong>2.0倍</strong>にした。`;
+      break;
+    }
+
+    case 'blizzard':{
+      if(side.isEnemy)G.powerFog=true;
+      if(opp.isEnemy){const hit=destroyFutureNpcCommand();body=hit?'相手の手札にあるコマンド1枚を、情報を伏せて破壊した。':'破壊できる相手コマンドがなかった。';}
+      else if(G.hand.length){G.hand.splice(Math.floor(Math.random()*G.hand.length),1);body='手札のコマンド1枚が、内容不明のまま破壊された。';}
+      else body='破壊できる相手コマンドがなかった。';
+      body='相手から双方の戦力表示を隠した。'+body;
+      break;
+    }
+
     case 'command_break':{
       if(opp.isEnemy){
         const changed=replaceFutureNpcCommand();
@@ -971,8 +1022,8 @@ async function resolvePair(pc,ec,n){
   await battleStep(
     `実働${n}結果`,
     '現在の戦況',
-    `自軍戦力 <strong>${fmt(G.player.power)}</strong>${
-      G.enemy.powerRevealed
+    `自軍戦力 <strong>${G.powerFog?'????':fmt(G.player.power)}</strong>${
+      !G.powerFog&&G.enemy.powerRevealed
         ?` / 敵軍戦力 <strong>${fmt(G.enemy.power)}</strong>`
         :' / 敵軍戦力 <strong>????</strong>'
     }`
