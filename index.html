@@ -152,7 +152,7 @@ select{width:100%;padding:12px;background:#111722;color:var(--text);border:1px s
 </div>
 
 <!-- 先にデータを読み込み、その後ゲーム本体を実行します -->
-<script src="characters.js?v=0.12"></script>
+<script src="characters.js?v=0.13"></script>
 <script src="npc.js?v=0.7"></script>
 
 <script>
@@ -587,17 +587,15 @@ async function resolveTurn(){
   G.player.mods.statMult=1;
   G.player.mods.enemySchemeMult=1;
   G.player.mods.recruitMult=1;
-  G.player.mods.damageTakenMult=1;
-  G.player.mods.powerGainMult=1;
+  G.player.mods.damageTakenMult=G.player.mods.tacticsUses>0?.5:1;
+  G.player.mods.powerGainMult=G.enemy.mods.tacticsUses>0?.5:1;
   G.player.mods.tacticsPending=false;
-  G.player.mods.tacticsUses=0;
   G.enemy.mods.statMult=1;
   G.enemy.mods.enemySchemeMult=1;
   G.enemy.mods.recruitMult=1;
-  G.enemy.mods.damageTakenMult=1;
-  G.enemy.mods.powerGainMult=1;
+  G.enemy.mods.damageTakenMult=G.enemy.mods.tacticsUses>0?.5:1;
+  G.enemy.mods.powerGainMult=G.player.mods.tacticsUses>0?.5:1;
   G.enemy.mods.tacticsPending=false;
-  G.enemy.mods.tacticsUses=0;
   G.player.mods.infectionActive=false;G.player.mods.infectionIntel=0;
   G.enemy.mods.infectionActive=false;G.enemy.mods.infectionIntel=0;
 
@@ -768,7 +766,7 @@ async function applySkill(side,opp,id,label){
 
     case 'tactics':
       side.mods.tacticsPending=true;
-      body='この実働の次の実働だけ、自軍戦力減少量と相手戦力上昇量を <strong>0.5倍</strong> にする。';
+      body='次の実働だけ、自軍戦力減少量と相手戦力上昇量を <strong>0.5倍</strong> にする。ターンをまたいでも有効。';
       break;
 
     case 'laser':
