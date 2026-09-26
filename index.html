@@ -152,7 +152,7 @@ select{width:100%;padding:12px;background:#111722;color:var(--text);border:1px s
 </div>
 
 <!-- 先にデータを読み込み、その後ゲーム本体を実行します -->
-<script src="characters.js?v=0.13"></script>
+<script src="characters.js?v=0.14"></script>
 <script src="npc.js?v=0.7"></script>
 
 <script>
@@ -796,8 +796,8 @@ async function applySkill(side,opp,id,label){
       const ready=opp.unitIds.filter(u=>opp.states[u].sp>=1);
       if(ready.length){
         const target=ready[Math.floor(Math.random()*ready.length)];
-        opp.states[target].sp=0;
-        body=`相手の現在戦力は <strong>${fmt(opp.power)}</strong>。準備中の相手ユニット1体の準備を0にした。`;
+        opp.states[target].sp--;
+        body=`相手の現在戦力は <strong>${fmt(opp.power)}</strong>。準備中の相手ユニット1体の準備を1減少させた。`;
       }else body=`相手の現在戦力は <strong>${fmt(opp.power)}</strong>。準備が1以上の相手ユニットはいなかった。`;
       break;
     }
