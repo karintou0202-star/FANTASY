@@ -152,7 +152,7 @@ select{width:100%;padding:12px;background:#111722;color:var(--text);border:1px s
 </div>
 
 <!-- 先にデータを読み込み、その後ゲーム本体を実行します -->
-<script src="characters.js?v=0.21"></script>
+<script src="characters.js?v=0.22"></script>
 <script src="npc.js?v=0.8"></script>
 
 <script>
@@ -534,7 +534,7 @@ function cmdName(t){
 
 function cmdDetail(c){
   const ch=CHARS[c.unit];
-  if(c.type==='recruit')return `戦力 +${fmt(effectiveStat(G.player,c.unit,'charisma')*G.player.mods.recruitMult)} / 策略防御`;
+  if(c.type==='recruit'){const beforeMult=ch.traitId==='otherworld_knowledge'?1.1:1;return `戦力 +${fmt(effectiveStat(G.player,c.unit,'charisma')*beforeMult*G.player.mods.recruitMult)} / 策略防御`;}
   if(c.type==='scheme')return `相手戦力 -${fmt(effectiveStat(G.player,c.unit,'intel'))}`;
   return `${ch.skill.name}へ準備 +1`;
 }
@@ -937,9 +937,9 @@ async function resolvePair(pc,ec,n){
   const eRecruit=ec.type==='recruit';
 
   if(pRecruit){
+    if(CHARS[pc.unit].traitId==='otherworld_knowledge')G.player.states[pc.unit].charismaMult*=1.1;
     const v=effectiveStat(G.player,pc.unit,'charisma')*G.player.mods.recruitMult;
     const actual=gainPower(G.player,v);
-    if(CHARS[pc.unit].traitId==='otherworld_knowledge')G.player.states[pc.unit].charismaMult*=1.1;
     render();
 
     await battleStep(
@@ -956,9 +956,9 @@ async function resolvePair(pc,ec,n){
   }
 
   if(eRecruit){
+    if(CHARS[ec.unit].traitId==='otherworld_knowledge')G.enemy.states[ec.unit].charismaMult*=1.1;
     const v=effectiveStat(G.enemy,ec.unit,'charisma')*G.enemy.mods.recruitMult;
     gainPower(G.enemy,v);
-    if(CHARS[ec.unit].traitId==='otherworld_knowledge')G.enemy.states[ec.unit].charismaMult*=1.1;
     render();
 
     await battleStep(
