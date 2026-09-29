@@ -45,10 +45,10 @@ const NPCS = {
     [['vanilla','prepare'],['vanilla','prepare'],['zazan','recruit'],['zazan','recruit']],
     [['zazan','recruit'],['zazan','prepare'],['zazan','prepare'],['zazan','prepare']]
   ]},
-  guren_larin:{name:'紅蓮＋ラーリン',style:'複合妨害型',units:['guren','larin'],turns:[
-    [['guren','prepare'],['larin','recruit'],['larin','recruit'],['larin','recruit']],
-    [['guren','prepare'],['larin','prepare'],['larin','prepare'],['guren','scheme']],
-    [['guren','scheme'],['guren','prepare'],['guren','recruit'],['guren','recruit']]
+  donbura_tsukune:{name:'ドンブラー＋ツクネ',style:'招集決戦型',units:['donbura','tsukune'],turns:[
+    [['tsukune','recruit'],['tsukune','recruit'],['tsukune','recruit'],['tsukune','recruit']],
+    [['donbura','recruit'],['donbura','recruit'],['donbura','scheme'],['donbura','scheme']],
+    [['donbura','recruit'],['tsukune','prepare'],['donbura','scheme'],['donbura','recruit']]
   ]},
   crow_lowja:{name:'クロウ＋ロウジャ',style:'策略強化型',units:['crow','lowja'],turns:[
     [['crow','recruit'],['crow','recruit'],['crow','recruit'],['crow','prepare']],
