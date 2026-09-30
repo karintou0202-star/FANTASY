@@ -70,10 +70,10 @@ const NPCS = {
     [['ggg','prepare'],['ggg','prepare'],['ggg','prepare'],['ggg','prepare']],
     [['ggg','scheme'],['ggg','scheme'],['ggg','scheme'],['larin','recruit']]
   ]},
-  crow_ggg:{name:'クロウ＋GGG',style:'強化策略型',units:['crow','ggg'],turns:[
-    [['crow','recruit'],['crow','recruit'],['crow','recruit'],['crow','prepare']],
-    [['crow','prepare'],['ggg','scheme'],['ggg','scheme'],['ggg','scheme']],
-    [['ggg','prepare'],['ggg','prepare'],['ggg','prepare'],['ggg','prepare']]
+  donbura_gasshaan:{name:'ドンブラー＋ガッシャーン',style:'再合体招集型',units:['donbura','gasshaan'],turns:[
+    [['donbura','recruit'],['gasshaan','prepare'],['gasshaan','prepare'],['donbura','recruit']],
+    [['gasshaan','recruit'],['gasshaan','recruit'],['donbura','scheme'],['gasshaan','recruit']],
+    [['donbura','recruit'],['donbura','scheme'],['donbura','scheme'],['donbura','recruit']]
   ]},
   ggg_zazan:{name:'GGG＋ザザン',style:'妨害決戦型',units:['ggg','zazan'],turns:[
     [['ggg','prepare'],['ggg','prepare'],['ggg','prepare'],['ggg','prepare']],
