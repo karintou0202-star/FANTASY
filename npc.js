@@ -81,13 +81,13 @@ const NPCS = {
     [['zazan','prepare'],['zazan','prepare'],['zazan','prepare'],['ggg','scheme']]
   ]},
   crow_anmi:{name:'クロウ＋アンミ',style:'感染強化型',units:['crow','anmi'],turns:[
-    [['crow','recruit'],['crow','recruit'],['crow','recruit'],['crow','prepare']],
-    [['crow','prepare'],['anmi','prepare'],['crow','scheme'],['crow','scheme']],
-    [['anmi','prepare'],['anmi','scheme'],['anmi','scheme'],['anmi','scheme']]
+    [['anmi','recruit'],['anmi','recruit'],['crow','recruit'],['crow','prepare']],
+    [['crow','prepare'],['anmi','prepare'],['crow','recruit'],['crow','recruit']],
+    [['anmi','prepare'],['crow','scheme'],['crow','scheme'],['crow','scheme']]
   ]},
   guren_anmi:{name:'紅蓮＋アンミ',style:'招集封鎖型',units:['guren','anmi'],turns:[
-    [['anmi','prepare'],['guren','prepare'],['anmi','scheme'],['anmi','scheme']],
     [['guren','prepare'],['guren','recruit'],['guren','recruit'],['guren','recruit']],
+    [['anmi','prepare'],['guren','prepare'],['anmi','scheme'],['anmi','scheme']],
     [['anmi','prepare'],['guren','prepare'],['guren','scheme'],['guren','scheme']]
   ]},
   gasshaan_anmi:{name:'ガッシャーン＋アンミ',style:'再合体感染型',units:['gasshaan','anmi'],turns:[
