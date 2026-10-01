@@ -152,7 +152,7 @@ select{width:100%;padding:12px;background:#111722;color:var(--text);border:1px s
 </div>
 
 <!-- 先にデータを読み込み、その後ゲーム本体を実行します -->
-<script src="characters.js?v=0.26"></script>
+<script src="characters.js?v=0.27"></script>
 <script src="npc.js?v=0.11"></script>
 
 <script>
@@ -601,6 +601,11 @@ async function resolveTurn(){
   G.player.mods.infectionActive=false;G.player.mods.infectionIntel=0;
   G.enemy.mods.infectionActive=false;G.enemy.mods.infectionIntel=0;
 
+  for(const side of [G.player,G.enemy])if(side.power<2000)for(const id of side.unitIds)if(CHARS[id].traitId==='dragon_majesty'){
+    side.states[id].powerMult=(side.states[id].powerMult||1)*statChangeMultiplier(2);
+    await battleStep('特性',`${side.isEnemy?'敵軍':'自軍'} ${unitDisplayName(side,id,side.isEnemy)}「逆鱗」`,`ターン開始時、戦力が2000未満のため武力が1.5倍。現在の武力 <strong>${fmt(effectiveStat(side,id,'power'))}</strong>。`,'skill','skilllog');
+  }
+
   for(const side of [G.player,G.enemy])for(const id of side.unitIds){const bonus=side.states[id].reassemblyBonuses?.[G.turn]||0;if(bonus){const actual=gainPower(side,bonus);await battleStep('特殊技能',`${side.isEnemy?'敵軍':'自軍'} ${unitDisplayName(side,id,side.isEnemy)}「再合体」`,`ターン開始時、戦力 <strong>+${fmt(actual)}</strong>。`,'skill','skilllog')}}
 
   for(const side of [G.player,G.enemy]){
@@ -621,10 +626,6 @@ async function resolveTurn(){
     if(G.ended)return;
   }
 
-  for(const side of [G.player,G.enemy])if(side.power<2000)for(const id of side.unitIds)if(CHARS[id].traitId==='dragon_majesty'){
-    side.states[id].powerMult=(side.states[id].powerMult||1)*statChangeMultiplier(2);
-    await battleStep('特性',`${side.isEnemy?'敵軍':'自軍'} ${unitDisplayName(side,id,side.isEnemy)}「逆鱗」`,`戦力が2000未満のため武力が1.5倍。現在の武力 <strong>${fmt(effectiveStat(side,id,'power'))}</strong>。`,'skill','skilllog');
-  }
   for(const side of [G.player,G.enemy])if(side.unitIds.some(id=>CHARS[id].traitId==='mascot')){
     const floor=side.unitIds.reduce((sum,id)=>sum+effectiveStat(side,id,'power'),0);
     if(side.power<floor){side.power=floor;await battleStep('特性',`${side.isEnemy?'敵軍':'自軍'}「マスコット」`,`ターン終了時、戦力を全ユニットの武力合計 <strong>${fmt(floor)}</strong> に変更。`,'skill','skilllog')}
