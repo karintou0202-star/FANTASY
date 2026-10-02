@@ -110,7 +110,7 @@ select{width:100%;padding:12px;background:#111722;color:var(--text);border:1px s
 
 <section id="game" class="hidden">
   <div class="panel topbar">
-    <div class="badge">ターン <span id="turnNo" class="big">1</span> / 3</div>
+    <div class="badge">ターン <span id="turnNo" class="big">1</span> / <span id="turnLimit">3</span></div>
     <div id="streakBadge" class="badge streak hidden">連勝 <span id="streakCount" class="big">0</span></div>
     <div class="badge">自軍戦力 <span id="playerPower" class="big">0</span></div>
     <div class="badge">敵戦力 <span id="enemyPower" class="big">????</span></div>
@@ -152,8 +152,8 @@ select{width:100%;padding:12px;background:#111722;color:var(--text);border:1px s
 </div>
 
 <!-- 先にデータを読み込み、その後ゲーム本体を実行します -->
-<script src="characters.js?v=0.28"></script>
-<script src="npc.js?v=0.12"></script>
+<script src="characters.js?v=0.29"></script>
+<script src="npc.js?v=0.13"></script>
 
 <script>
 let G=null, timerId=null, setupFormation=['tsukune','lowja'];
@@ -493,6 +493,7 @@ function unitStateHTML(side,id){
 
 function render(){
   $('#turnNo').textContent=G.turn;
+  $('#turnLimit').textContent=G.npc.decisiveTurn||3;
   $('#playerPower').textContent=G.powerFog?'????':fmt(G.player.power);
   $('#enemyPower').textContent=!G.powerFog&&G.enemy.powerRevealed?fmt(G.enemy.power):'????';
 
@@ -648,7 +649,7 @@ async function resolveTurn(){
 
   G.turn++;
 
-  if(G.turn===4){
+  if(G.turn>(G.npc.decisiveTurn||3)){
     await finalBattle();
     return;
   }
@@ -1171,6 +1172,12 @@ async function useDecisiveStep(side,label){
   if(side.isEnemy)revealEnemyUnit(id);
   side.states[id].decisiveReady=false;
 
+  if(c.skill.id==='final_explosion'){
+    const opp=side===G.player?G.enemy:G.player;
+    const damage=reducePower(opp,c.skill.damage);
+    render();await battleStep('決戦スキル',`${label} ${unitDisplayName(side,id,side.isEnemy)}「${c.skill.name}」`,`相手の戦力 <strong>-${fmt(damage)}</strong>。`,'skill','skilllog');
+    return;
+  }
   const multiplier=c.skill.multiplier||1;
   side.power=Math.floor(side.power*multiplier);
 
