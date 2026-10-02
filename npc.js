@@ -1,5 +1,9 @@
 // Fixed NPC action tables. Each turn contains four [unit, command] entries.
 const NPCS = {
+  goblin_short_test:{name:'特殊NPC・準備するゴブリン2',style:'固定対戦専用・2ターン決戦',fixedOnly:true,initialPower:1000,decisiveTurn:2,units:['goblin_short_test'],turns:[
+    [['goblin_short_test','recruit'],['goblin_short_test','scheme'],['goblin_short_test','recruit'],['goblin_short_test','scheme']],
+    [['goblin_short_test','prepare'],['goblin_short_test','prepare'],['goblin_short_test','prepare'],['goblin_short_test','prepare']]
+  ]},
   goron_test:{name:'特殊NPC・ゴロン',style:'固定対戦専用・ストーリー仕様',fixedOnly:true,initialPower:2160,units:['goron_test'],turns:[
     [['goron_test','recruit'],['goron_test','recruit'],['goron_test','recruit'],['goron_test','recruit']],
     [['goron_test','prepare'],['goron_test','prepare'],['goron_test','prepare'],['goron_test','prepare']],
