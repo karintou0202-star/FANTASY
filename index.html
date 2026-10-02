@@ -152,8 +152,8 @@ select{width:100%;padding:12px;background:#111722;color:var(--text);border:1px s
 </div>
 
 <!-- 先にデータを読み込み、その後ゲーム本体を実行します -->
-<script src="characters.js?v=0.27"></script>
-<script src="npc.js?v=0.11"></script>
+<script src="characters.js?v=0.28"></script>
+<script src="npc.js?v=0.12"></script>
 
 <script>
 let G=null, timerId=null, setupFormation=['tsukune','lowja'];
@@ -326,7 +326,7 @@ $('#skipLogBtn').onclick=e=>{e.stopPropagation();if(!npcSkipArmed){npcSkipArmed=
 $('#battleStage').onclick=e=>{if(e.target.closest('button'))return;finishPendingStep()};
 
 function randomNpcId(excludeId=null){
-  const ids=Object.keys(NPCS);
+  const ids=Object.keys(NPCS).filter(id=>!NPCS[id].fixedOnly);
   const choices=ids.length>1?ids.filter(id=>id!==excludeId):ids;
   return choices[Math.floor(Math.random()*choices.length)];
 }
@@ -416,7 +416,7 @@ function startMatch(mode,npcId,run=null,selectedUnits=null){
     run,
     npcId,
     player:mkSide(playerUnits,false),
-    enemy:mkSide(npc.units,true),
+    enemy:Object.assign(mkSide(npc.units,true),Number.isFinite(npc.initialPower)?{power:npc.initialPower}:{}),
     npc,
     npcTurns:buildNpcTurns(npc),
     deck,
@@ -530,13 +530,14 @@ $('#foresightBtn').onclick=()=>{
 };
 
 function cmdName(t){
-  return t==='recruit'?'招集':t==='scheme'?'策略':t==='prepare'?'準備':'破壊済み';
+  return t==='recruit'?'招集':t==='scheme'?'策略':t==='prepare'?'準備':'何もしない';
 }
 
 function cmdDetail(c){
   const ch=CHARS[c.unit];
   if(c.type==='recruit'){const beforeMult=ch.traitId==='otherworld_knowledge'?statChangeMultiplier(1.1):1;return `戦力 +${fmt(effectiveStat(G.player,c.unit,'charisma')*beforeMult*G.player.mods.recruitMult)} / 策略防御`;}
   if(c.type==='scheme')return `相手戦力 -${fmt(effectiveStat(G.player,c.unit,'intel'))}`;
+  if(c.type==='blank')return '何もしない';
   return `${ch.skill.name}へ準備 +1`;
 }
 
@@ -669,6 +670,10 @@ async function prepStep(side,card,label){
   const ch=CHARS[card.unit];
   const shown=unitDisplayName(side,card.unit,side.isEnemy);
 
+  if(ch.traitId==='nuisance_bomb'){
+    const own=reducePower(side,500),opp=side===G.player?G.enemy:G.player,other=reducePower(opp,500);
+    render();await battleStep('特性',`${label} ${shown}「お邪魔爆弾」`,`自身の戦力 -${fmt(own)}、相手の戦力 -${fmt(other)}。`,'skill','skilllog');
+  }
   if(st.decisiveReady){
     await battleStep(
       '準備処理',
@@ -829,6 +834,12 @@ async function applySkill(side,opp,id,label){
       break;
     }
 
+    case 'chain_explosion':{
+      side.states[id].zeroAtFinal=true;
+      if(opp.isEnemy){const changed=replaceFutureNpcCommand();const second=replaceFutureNpcCommandExcept(changed);body=`次ターン以降の予定${changed?(second?2:1):0}枠をランダムに再設定した。`;}
+      else{const count=Math.min(2,G.deck.length);for(let i=0;i<count;i++)G.deck[i]={...G.deck[i],type:'blank'};body=`相手の山札の上${count}枚を何もしないカードに変更した。`;}
+      body+=' 決戦時に自身の戦力を0にする。';break;
+    }
     case 'dragon_god':{
       const actual=gainPower(side,effectiveStat(side,id,'power')*0.8);
       body=`現在の武力の0.8倍、戦力 <strong>+${fmt(actual)}</strong>。`;break;
@@ -1067,6 +1078,8 @@ async function checkReassembly(side,label){
   return true;
 }
 
+function tieResult(){const p=G.player.unitIds.some(id=>CHARS[id].traitId==='nuisance_bomb'),e=G.enemy.unitIds.some(id=>CHARS[id].traitId==='nuisance_bomb');return p===e?['引き分け','draw']:p?['勝利','win']:['敗北','lose']}
+function replaceFutureNpcCommandExcept(first){const candidates=[];for(let t=G.turn;t<G.npcTurns.length;t++)for(let i=0;i<4;i++)if(!first||t!==first.turn-1||i!==first.slot-1)candidates.push([t,i]);if(!candidates.length)return null;const [t,i]=candidates[Math.floor(Math.random()*candidates.length)];G.npcTurns[t][i]=randomNpcAction(G.npc.units);return {turn:t+1,slot:i+1}}
 function endEarly(){
   clearInterval(timerId);
   G.ended=true;
@@ -1074,7 +1087,7 @@ function endEarly(){
   let title,cls;
 
   if(G.player.power<=0&&G.enemy.power<=0){
-    title='引き分け';cls='draw';
+    [title,cls]=tieResult();
   }else if(G.enemy.power<=0){
     title='勝利';cls='win';
   }else{
@@ -1112,6 +1125,7 @@ async function finalBattle(){
     await useDecisiveStep(G.player,'自軍');
   }
 
+  for(const side of [G.player,G.enemy])if(side.unitIds.some(id=>side.states[id].zeroAtFinal)){side.power=0;render();await battleStep('決戦スキル',`${side.isEnemy?'敵軍':'自軍'}「誘爆」`,'自身の戦力を0にした。','skill','skilllog');}
   render();
 
   let title,cls;
@@ -1121,7 +1135,7 @@ async function finalBattle(){
   }else if(G.player.power<G.enemy.power){
     title='敗北';cls='lose';
   }else{
-    title='引き分け';cls='draw';
+    [title,cls]=tieResult();
   }
 
   await battleStep(
