@@ -1,5 +1,10 @@
 // Fixed NPC action tables. Each turn contains four [unit, command] entries.
 const NPCS = {
+  goron_test:{name:'特殊NPC・ゴロン',style:'固定対戦専用・ストーリー仕様',fixedOnly:true,initialPower:2160,units:['goron_test'],turns:[
+    [['goron_test','recruit'],['goron_test','recruit'],['goron_test','recruit'],['goron_test','recruit']],
+    [['goron_test','prepare'],['goron_test','prepare'],['goron_test','prepare'],['goron_test','prepare']],
+    [['goron_test','prepare'],['goron_test','prepare'],['goron_test','scheme'],['goron_test','scheme']]
+  ]},
   guren_crow:{name:'紅蓮＋クロウ',style:'戦力強化型',units:['guren','crow'],turns:[
     [['guren','recruit'],['guren','recruit'],['guren','recruit'],['crow','prepare']],
     [['crow','prepare'],['crow','recruit'],['crow','recruit'],['crow','recruit']],
