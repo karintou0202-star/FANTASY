@@ -152,7 +152,7 @@ select{width:100%;padding:12px;background:#111722;color:var(--text);border:1px s
 </div>
 
 <!-- 先にデータを読み込み、その後ゲーム本体を実行します -->
-<script src="characters.js?v=0.29"></script>
+<script src="characters.js?v=0.30"></script>
 <script src="npc.js?v=0.13"></script>
 
 <script>
@@ -917,6 +917,14 @@ async function applySkill(side,opp,id,label){
   );
 }
 
+async function applyDragonFragment(side,card,opponentCard,label){
+  if(card?.type!=='prepare'||opponentCard?.type!=='recruit'||CHARS[card.unit]?.traitId!=='dragon_fragment')return;
+  const state=side.states[card.unit],multiplier=statChangeMultiplier(1.4);
+  state.powerMult=(state.powerMult||1)*multiplier;
+  render();
+  await battleStep('特性',`${label} ${unitDisplayName(side,card.unit,side.isEnemy)}「片鱗」`,`相手の招集に反応し、武力が${multiplier}倍（戦闘中永続・累積）。現在の武力 <strong>${fmt(effectiveStat(side,card.unit,'power'))}</strong>。`,'skill','skilllog');
+}
+
 async function resolvePair(pc,ec,n){
   G.actionCount++;
   const playerTacticsActive=G.player.mods.tacticsUses>0;
@@ -936,6 +944,8 @@ async function resolvePair(pc,ec,n){
     </div>`
   );
 
+  await applyDragonFragment(G.player,pc,ec,'自軍');
+  await applyDragonFragment(G.enemy,ec,pc,'敵軍');
   await prepStep(G.player,pc,'自軍');
   await prepStep(G.enemy,ec,'敵軍');
 
@@ -1176,6 +1186,12 @@ async function useDecisiveStep(side,label){
     const opp=side===G.player?G.enemy:G.player;
     const damage=reducePower(opp,c.skill.damage);
     render();await battleStep('決戦スキル',`${label} ${unitDisplayName(side,id,side.isEnemy)}「${c.skill.name}」`,`相手の戦力 <strong>-${fmt(damage)}</strong>。`,'skill','skilllog');
+    return;
+  }
+  if(c.skill.id==='dragon_transform'){
+    const gain=effectiveStat(side,id,'power')*c.skill.powerMultiplier;
+    side.power+=gain;
+    render();await battleStep('決戦スキル',`${label} ${unitDisplayName(side,id,side.isEnemy)}「${c.skill.name}」`,`現在の武力の${c.skill.powerMultiplier}倍、戦力 <strong>+${fmt(gain)}</strong> → <strong>${fmt(side.power)}</strong>。`,'skill','skilllog');
     return;
   }
   const multiplier=c.skill.multiplier||1;
