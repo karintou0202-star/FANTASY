@@ -152,8 +152,8 @@ select{width:100%;padding:12px;background:#111722;color:var(--text);border:1px s
 </div>
 
 <!-- 先にデータを読み込み、その後ゲーム本体を実行します -->
-<script src="characters.js?v=0.31"></script>
-<script src="npc.js?v=0.13"></script>
+<script src="characters.js?v=0.32"></script>
+<script src="npc.js?v=0.14"></script>
 
 <script>
 let G=null, timerId=null, setupFormation=['tsukune','lowja'];
@@ -1193,6 +1193,11 @@ async function useDecisiveStep(side,label){
     const opp=side===G.player?G.enemy:G.player;
     const damage=reducePower(opp,c.skill.damage);
     render();await battleStep('決戦スキル',`${label} ${unitDisplayName(side,id,side.isEnemy)}「${c.skill.name}」`,`相手の戦力 <strong>-${fmt(damage)}</strong>。`,'skill','skilllog');
+    return;
+  }
+  if(c.skill.id==='call_reinforcements'){
+    side.power+=c.skill.gain;
+    render();await battleStep('決戦スキル',`${label} ${unitDisplayName(side,id,side.isEnemy)}「${c.skill.name}」`,`戦力 <strong>+${fmt(c.skill.gain)}</strong>。`,'skill','skilllog');
     return;
   }
   if(c.skill.id==='dragon_transform'){
