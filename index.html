@@ -152,7 +152,7 @@ select{width:100%;padding:12px;background:#111722;color:var(--text);border:1px s
 </div>
 
 <!-- 先にデータを読み込み、その後ゲーム本体を実行します -->
-<script src="characters.js?v=0.30"></script>
+<script src="characters.js?v=0.31"></script>
 <script src="npc.js?v=0.13"></script>
 
 <script>
@@ -868,6 +868,13 @@ async function applySkill(side,opp,id,label){
       side.mods.damageTakenMult*=1.5;opp.mods.damageTakenMult*=1.5;
       const actual=reducePower(opp,effectiveStat(side,id,'intel')*1.7);
       body=`このターン中、双方の戦力減少量を1.5倍にする。さらに相手戦力を <strong>-${fmt(actual)}</strong>。`;
+      break;
+    }
+
+    case 'surprise_magic':{
+      const actual=reducePower(side,300),multiplier=statChangeMultiplier(1.3);
+      side.states[id].statMult*=multiplier;
+      body=`自軍戦力 <strong>-${fmt(actual)}</strong>。自身の武力・カリスマ・知略を<strong>${multiplier}倍</strong>にした。`;
       break;
     }
 
