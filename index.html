@@ -465,7 +465,7 @@ function effectiveStat(side,id,key){
 }
 
 function gainPower(side,value){const actual=value*side.mods.powerGainMult;side.power+=actual;return actual}
-function reducePower(side,value){let actual=value*side.mods.damageTakenMult;if(side.unitIds.some(id=>CHARS[id].traitId==='reckless'))actual*=actual<=999?.5:1.5;side.power-=actual;return actual}
+function reducePower(side,value){let actual=value*side.mods.damageTakenMult*(side.mods.grandstandMult||1);if(side.unitIds.some(id=>CHARS[id].traitId==='reckless'))actual*=actual<=999?.5:1.5;side.power-=actual;return actual}
 
 function unitStateHTML(side,id){
   const c=CHARS[id],s=side.states[id];
@@ -591,12 +591,14 @@ async function resolveTurn(){
   G.player.mods.statMult=1;
   G.player.mods.enemySchemeMult=1;
   G.player.mods.recruitMult=1;
+  G.player.mods.grandstandMult=1;
   G.player.mods.damageTakenMult=G.player.mods.tacticsUses>0?.5:1;
   G.player.mods.powerGainMult=G.enemy.mods.tacticsUses>0?.5:1;
   G.player.mods.tacticsPending=false;
   G.enemy.mods.statMult=1;
   G.enemy.mods.enemySchemeMult=1;
   G.enemy.mods.recruitMult=1;
+  G.enemy.mods.grandstandMult=1;
   G.enemy.mods.damageTakenMult=G.enemy.mods.tacticsUses>0?.5:1;
   G.enemy.mods.powerGainMult=G.player.mods.tacticsUses>0?.5:1;
   G.enemy.mods.tacticsPending=false;
@@ -865,7 +867,7 @@ async function applySkill(side,opp,id,label){
     }
 
     case 'grandstand':{
-      side.mods.damageTakenMult*=1.5;opp.mods.damageTakenMult*=1.5;
+      side.mods.grandstandMult=(side.mods.grandstandMult||1)*1.5;opp.mods.grandstandMult=(opp.mods.grandstandMult||1)*1.5;
       const actual=reducePower(opp,effectiveStat(side,id,'intel')*1.7);
       body=`このターン中、双方の戦力減少量を1.5倍にする。さらに相手戦力を <strong>-${fmt(actual)}</strong>。`;
       break;
@@ -1265,3 +1267,4 @@ initSetup();
 </script>
 </body>
 </html>
+
