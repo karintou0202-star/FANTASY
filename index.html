@@ -64,6 +64,7 @@ select{width:100%;padding:12px;background:#111722;color:var(--text);border:1px s
 .battlePanel{transition:border-color .25s,background-color .25s}.gameActionBar{position:fixed;z-index:20;left:0;right:0;bottom:0;background:#111722ee;border-top:1px solid var(--line);padding:10px max(12px,calc((100% - 1076px)/2)) calc(10px + env(safe-area-inset-bottom));backdrop-filter:blur(9px)}.gameActions{display:flex;justify-content:flex-end;gap:8px}.gameActions .btn{min-height:48px;min-width:140px}
 .resultActions{position:fixed;z-index:20;left:0;right:0;bottom:0;display:flex;justify-content:center;gap:8px;background:#111722ee;border-top:1px solid var(--line);padding:10px max(12px,calc((100% - 1076px)/2)) calc(10px + env(safe-area-inset-bottom));backdrop-filter:blur(9px)}.resultActions .btn{min-height:48px;flex:1;max-width:520px}
 @media(max-width:760px){.gameActionBar{padding-left:8px;padding-right:8px}.gameActions{display:grid;grid-template-columns:1fr 1fr}.gameActions .btn{min-width:0;padding:8px 6px}#nextLogBtn:not(.hidden){grid-column:1/-1}.resultActions{padding-left:8px;padding-right:8px}}
+.result{scroll-margin-top:100px}
 </style>
 </head>
 <body>
@@ -1222,6 +1223,8 @@ async function useDecisiveStep(side,label){
   );
 }
 
+
+function scrollToBattleResult(){setTimeout(()=>$('#result').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'}),0)}
 function showResult(title,cls,msg){
   G.ended=true;
   $('#game').classList.add('hidden');
@@ -1229,6 +1232,7 @@ function showResult(title,cls,msg){
 
   const r=$('#result');
   r.classList.remove('hidden');
+  scrollToBattleResult();
 
   const enemy=G.npc.units.map(id=>unitDisplayName(G.enemy,id)).join(' ＋ ');
 
