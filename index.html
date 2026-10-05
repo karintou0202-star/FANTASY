@@ -153,7 +153,7 @@ select{width:100%;padding:12px;background:#111722;color:var(--text);border:1px s
 </div>
 
 <!-- 先にデータを読み込み、その後ゲーム本体を実行します -->
-<script src="characters.js?v=0.33"></script>
+<script src="characters.js?v=0.34"></script>
 <script src="npc.js?v=0.14"></script>
 
 <script>
@@ -764,8 +764,8 @@ async function applySkill(side,opp,id,label){
       break;
 
     case 'p_commander':
-      side.mods.statMult=statChangeMultiplier(1.5);
-      body=`このターン中、両ユニットの武力・カリスマ・知略を <strong>${statChangeMultiplier(1.5)}倍</strong>。`;
+      side.mods.statMult=statChangeMultiplier(2.0);
+      body=`このターン中、両ユニットの武力・カリスマ・知略を <strong>${statChangeMultiplier(2.0)}倍</strong>。`;
       break;
 
     case 'binding_rope':
