@@ -153,7 +153,7 @@ select{width:100%;padding:12px;background:#111722;color:var(--text);border:1px s
 </div>
 
 <!-- 先にデータを読み込み、その後ゲーム本体を実行します -->
-<script src="characters.js?v=0.35"></script>
+<script src="characters.js?v=0.36"></script>
 <script src="npc.js?v=0.14"></script>
 
 <script>
@@ -595,8 +595,17 @@ function applyStrategyStartTraits(){
  for(const side of [G.player,G.enemy])for(const id of side.unitIds){
   const trait=CHARS[id].traitId,opp=side===G.player?G.enemy:G.player;
   if(trait==='steal'){const target=opp.unitIds[Math.floor(Math.random()*opp.unitIds.length)];opp.states[target].charismaDelta=(opp.states[target].charismaDelta||0)-80;log(`「盗む」：${unitDisplayName(opp,target,opp.isEnemy)}のカリスマ -80（戦闘中永続）。`,'skilllog')}
-  if(trait==='reluctant_fighter'){const loss=reducePower(side,200);side.states[id].charismaDelta=(side.states[id].charismaDelta||0)+100;log(`${unitDisplayName(side,id,side.isEnemy)}の特性：戦力 -${fmt(loss)}、カリスマ +100。`,'skilllog')}
  }
+}
+async function applyTurnEndTraits(){
+ for(const side of [G.player,G.enemy])for(const id of side.unitIds)if(CHARS[id].traitId==='reluctant_fighter'){
+  const loss=reducePower(side,200);side.states[id].charismaDelta=(side.states[id].charismaDelta||0)+50;
+  render();await battleStep('特性',`${side.isEnemy?'敵軍':'自軍'} ${unitDisplayName(side,id,side.isEnemy)}`,
+   `ターン終了時、戦力 <strong>-${fmt(loss)}</strong>、自身のカリスマ <strong>+50</strong>（戦闘中累積）。`,'skill','skilllog');
+ }
+ G.player.power=Math.floor(G.player.power);G.enemy.power=Math.floor(G.enemy.power);
+ await checkReassembly(G.player,'自軍');await checkReassembly(G.enemy,'敵軍');
+ if(G.player.power<=0||G.enemy.power<=0){endEarly();return true}return false;
 }
 function consumeManipulation(side,card){
  if(card?.type==='recruit'&&side.mods.manipulation>0){side.mods.manipulation--;log(`${side.isEnemy?'敵軍':'自軍'}の「招集」を「準備」に変更（操作）。`,'skilllog');return {...card,type:'prepare'}}return card;
@@ -658,6 +667,8 @@ async function resolveTurn(){
     const id=side.unitIds.find(unitId=>CHARS[unitId].traitId==='solo_stage'&&cards.length===4&&cards.every(card=>card?.unit===unitId));
     if(id){const state=side.states[id];state.statMult*=statChangeMultiplier(1.3);state.soloCount++;if(state.soloCount>=3)state.curtainCallReady=true;await battleStep('特性',`${label} ${unitDisplayName(side,id,side.isEnemy)}「独壇場」`,`自身の全ステータスが${statChangeMultiplier(1.3)}倍。発動回数 <strong>${state.soloCount} / 3</strong>${state.curtainCallReady?'<br>決戦スキル「カーテンコール」を獲得！':''}`,'skill','skilllog')}
   }
+
+  if(await applyTurnEndTraits())return;
 
   await battleStep(
     `ターン${G.turn}`,
@@ -1311,5 +1322,6 @@ initSetup();
 </script>
 </body>
 </html>
+
 
 

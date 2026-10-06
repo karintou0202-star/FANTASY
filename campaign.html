@@ -24,7 +24,7 @@
 <section id="battle" class="hidden"><div class="panel"><div id="battleTitle" class="chapter"></div><div class="unitProfiles"><div class="armyGroup"><h3>自軍</h3><div id="playerProfiles" class="unitrow"></div></div><div class="armyGroup"><h3>敵軍</h3><div id="enemyProfile" class="unitrow"></div></div></div><div class="powerBoard"><div class="powerLane"><div class="powerHead"><span>自軍戦力</span><b id="playerPower">0</b></div><div class="bar"><div id="playerFill" class="fill"></div></div></div><div class="powerLane enemy"><div class="powerHead"><span>敵戦力</span><b id="enemyPower">0</b></div><div class="bar"><div id="enemyFill" class="fill"></div></div></div></div><div class="battleDialogue"><div id="battleSpeaker" class="battleSpeaker">戦況</div><div id="battleMessage" class="battleMessage">コマンドを選択してください。</div></div></div><div id="commandPanel" class="panel"><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><h3 style="margin:0">ターン <span id="turn">1 / 3</span>　戦略フェイズ</h3><span class="small">手札から4枚を使用順に選択</span><button id="campaignForesightBtn" class="btn secondary hidden" style="margin-left:auto">見切り：8枚引き直す</button></div><div id="selection" class="selection"></div><div id="hand" class="hand"></div></div><div id="logPanel" class="panel hidden"><h3>戦闘履歴</h3><div id="log" class="log"></div></div></section>
 <section id="result" class="panel result hidden"></section></main>
 <div id="storyActions" class="actionBar hidden"><button id="autoBtn" class="btn secondary">オート</button><button id="skipBtn" class="btn secondary">一括省略</button><button id="nextBtn" class="btn">次へ</button></div><div id="battleActions" class="battleActions hidden"><button id="undoBtn" class="btn secondary">1枚戻す</button><button id="resolveBtn" class="btn" disabled>4枚を決定</button><button id="campaignAutoBtn" class="btn utility hidden">オート</button><button id="campaignSkipBtn" class="btn utility hidden">一気に最後まで</button><button id="nextTurnBtn" class="btn hidden">次のターンへ</button></div>
-<script src="characters.js?v=0.35"></script><script src="npc.js?v=0.14"></script><script src="campaign-chapters.js?v=0.3"></script><script src="campaign-chapter5.js?v=1"></script><script>
+<script src="characters.js?v=0.36"></script><script src="npc.js?v=0.14"></script><script src="campaign-chapters.js?v=0.3"></script><script src="campaign-chapter5.js?v=1"></script><script>
 const $=s=>document.querySelector(s),cmdName={recruit:'招集',scheme:'策略',prepare:'準備',blank:'何もしない'};
 let formation=['tsukune','jackeen'];try{const s=JSON.parse(localStorage.getItem('fantasyFormation'));if(Array.isArray(s)&&s.length===2&&s.every(id=>CHARS[id]))formation=s}catch(e){}if(formation[0]==='vanilla'&&formation[1]==='vanilla')formation=['vanilla','vanilla_clone'];if(CHARS[formation[0]].evolutionGroup&&CHARS[formation[0]].evolutionGroup===CHARS[formation[1]].evolutionGroup)formation=['tsukune','jackeen'];
 function campaignUnitName(id){const name=CHARS[id].name,same=formation.filter(unitId=>CHARS[unitId].name===name);return same.length>1?`${name}${String.fromCharCode(65+same.indexOf(id))}`:name}
@@ -139,12 +139,22 @@ function campaignStrategyStartTraits(){
  const enemies=Object.entries(b.enemy.units||{main:b.enemy});
  for(const id of formation){
   if(CHARS[id].traitId==='steal'){const [key,actor]=enemies[Math.floor(Math.random()*enemies.length)];b.enemyCharismaDelta[key]=(b.enemyCharismaDelta[key]||0)-80;addLog(`「盗む」：${actor.name||b.enemy.name}のカリスマ -80（戦闘中永続）`,'skill')}
-  if(CHARS[id].traitId==='reluctant_fighter'){const loss=campaignReducePlayer(200);b.playerCharismaDelta[id]=(b.playerCharismaDelta[id]||0)+100;addLog(`${campaignUnitName(id)}の特性：戦力 -${loss}、カリスマ +100`,'skill')}
  }
  for(const [key,actor] of enemies){
   if(actor.traitId==='steal'){const id=formation[Math.floor(Math.random()*formation.length)];b.playerCharismaDelta[id]=(b.playerCharismaDelta[id]||0)-80;addLog(`「盗む」：${campaignUnitName(id)}のカリスマ -80（戦闘中永続）`,'bad')}
-  if(actor.traitId==='reluctant_fighter'){const loss=campaignReduceEnemy(200);b.enemyCharismaDelta[key]=(b.enemyCharismaDelta[key]||0)+100;addLog(`${actor.name}の特性：戦力 -${loss}、カリスマ +100`,'bad')}
  }
+}
+function campaignTurnEndTraits(){
+ const b=battle;
+ for(const id of formation)if(CHARS[id].traitId==='reluctant_fighter'){
+  const loss=campaignReducePlayer(200);b.playerCharismaDelta[id]=(b.playerCharismaDelta[id]||0)+50;
+  addLog(`${campaignUnitName(id)}の特性：ターン終了時、戦力 -${campaignDisplayNumber(loss)}、自身のカリスマ +50（戦闘中累積）`,'skill');
+ }
+ for(const [key,actor] of Object.entries(b.enemy.units||{main:b.enemy}))if(actor.traitId==='reluctant_fighter'){
+  const loss=campaignReduceEnemy(200);b.enemyCharismaDelta[key]=(b.enemyCharismaDelta[key]||0)+50;
+  addLog(`${actor.name}の特性：ターン終了時、戦力 -${campaignDisplayNumber(loss)}、自身のカリスマ +50（戦闘中累積）`,'bad');
+ }
+ b.playerPower=Math.floor(b.playerPower);b.enemyPower=Math.floor(b.enemyPower);campaignCheckReassembly();
 }
 function campaignEnemyStat(actor,key,stat){return Math.max(0,(stat==='power'?(actor.powerStat??actor.power??0):(actor[stat]??0))+(stat==='charisma'?(battle.enemyCharismaDelta?.[key]||0):0))*(battle.enemyStatMult||1)}
 function campaignReducePlayer(value){if(battle.noPowerLoss)return 0;let actual=value*(battle.playerDamageMult??1)*(battle.grandstandMult??1);if(formation.some(id=>CHARS[id].traitId==='reckless'))actual*=actual<=999?.5:1.5;battle.playerPower-=actual;return actual}
@@ -245,6 +255,7 @@ function resolveTurn(){
  }
  if(formation.some(id=>CHARS[id].traitId==='mascot')){const floor=formation.reduce((sum,id)=>sum+campaignStat(id,'power'),0);if(b.playerPower<floor){b.playerPower=floor;campaignGainReaction(false);addLog(`特性「マスコット」：ターン終了時の戦力を ${campaignDisplayNumber(floor)} に変更`,'skill')}}
  const soloId=formation.find(id=>CHARS[id].traitId==='solo_stage'&&b.selected.length===4&&b.selected.every(card=>card.unit===id));if(soloId){b.playerUnitStatMult[soloId]*=campaignStatChangeMultiplier(1.3);b.soloCount[soloId]++;if(b.soloCount[soloId]>=3)b.curtainCallReady[soloId]=true;addLog(`特性「独壇場」：${campaignUnitName(soloId)}の全ステータス${campaignStatChangeMultiplier(1.3)}倍（${b.soloCount[soloId]} / 3）${b.curtainCallReady[soloId]?'／カーテンコール獲得':''}`,'skill')}
+ if(b.playerPower>0&&b.enemyPower>0)campaignTurnEndTraits();
  b.selected=[];
  if(b.playerPower<=0){const win=b.enemyPower<=0&&campaignTieWin();b.afterLabel=win?'勝利結果へ':'敗北結果へ';b.afterLogs=()=>endBattle(win)}
  else if(b.enemyPower<=0){b.afterLabel='勝利結果へ';b.afterLogs=()=>endBattle(true)}
@@ -331,6 +342,7 @@ startBattle=function(id){startBattleTraitsBase(id);battle.playerCharismaMult=Obj
 const showCampaignCommandsTraitsBase=showCampaignCommands;
 showCampaignCommands=function(){campaignStrategyStartTraits();const count=formation.filter(unitId=>CHARS[unitId].traitId==='persuasion').length;if(count){campaignGainPlayer(200*count);addLog(`特性「説得」：戦力 +${200*count}`,'skill')}showCampaignCommandsTraitsBase()};
 </script></body></html>
+
 
 
 
