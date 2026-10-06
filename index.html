@@ -153,7 +153,7 @@ select{width:100%;padding:12px;background:#111722;color:var(--text);border:1px s
 </div>
 
 <!-- 先にデータを読み込み、その後ゲーム本体を実行します -->
-<script src="characters.js?v=0.36"></script>
+<script src="characters.js?v=0.37"></script>
 <script src="npc.js?v=0.14"></script>
 
 <script>
@@ -599,7 +599,7 @@ function applyStrategyStartTraits(){
 }
 async function applyTurnEndTraits(){
  for(const side of [G.player,G.enemy])for(const id of side.unitIds)if(CHARS[id].traitId==='reluctant_fighter'){
-  const loss=reducePower(side,200);side.states[id].charismaDelta=(side.states[id].charismaDelta||0)+50;
+  const loss=reducePower(side,300);side.states[id].charismaDelta=(side.states[id].charismaDelta||0)+50;
   render();await battleStep('特性',`${side.isEnemy?'敵軍':'自軍'} ${unitDisplayName(side,id,side.isEnemy)}`,
    `ターン終了時、戦力 <strong>-${fmt(loss)}</strong>、自身のカリスマ <strong>+50</strong>（戦闘中累積）。`,'skill','skilllog');
  }
@@ -1322,6 +1322,7 @@ initSetup();
 </script>
 </body>
 </html>
+
 
 
 
