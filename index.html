@@ -153,7 +153,7 @@ select{width:100%;padding:12px;background:#111722;color:var(--text);border:1px s
 </div>
 
 <!-- 先にデータを読み込み、その後ゲーム本体を実行します -->
-<script src="characters.js?v=0.34"></script>
+<script src="characters.js?v=0.35"></script>
 <script src="npc.js?v=0.14"></script>
 
 <script>
@@ -449,6 +449,7 @@ function startMatch(mode,npcId,run=null,selectedUnits=null){
   log(`自軍初期戦力：<b>${fmt(G.player.power)}</b>`,'good');
   if(G.player.unitIds.some(id=>CHARS[id].traitId==='wise_general'))log('特性「智将」：相手の戦力を公開。','skilllog');
   if(G.player.unitIds.some(id=>CHARS[id].traitId==='love'))log('特性「恋心」：全ユニットの準備 +1（特殊技能は発動しない）。','skilllog');
+  applyStrategyStartTraits();
   render();
   startTimer();
 }
@@ -462,11 +463,17 @@ function effectiveStat(side,id,key){
   let bonus=0;
   if(c.traitId==='protagonist'&&partner&&CHARS[partner].rarity<=3)bonus=key==='power'?100:(key==='charisma'||key==='intel'?50:0);
   const growth=key==='charisma'?(side.states[id].charismaMult||1):1;
-  return (c[key]+bonus)*growth*(key==='power'?(side.states[id].powerMult||1):1)*(side.states[id].statMult||1)*side.mods.statMult*side.mods.persistentStatMult;
+  return Math.max(0,c[key]+bonus+(key==='charisma'?(side.states[id].charismaDelta||0):0))*growth*(key==='power'?(side.states[id].powerMult||1):1)*(side.states[id].statMult||1)*side.mods.statMult*side.mods.persistentStatMult;
 }
 
-function gainPower(side,value){const actual=value*side.mods.powerGainMult;side.power+=actual;return actual}
-function reducePower(side,value){let actual=value*side.mods.damageTakenMult*(side.mods.grandstandMult||1);if(side.unitIds.some(id=>CHARS[id].traitId==='reckless'))actual*=actual<=999?.5:1.5;side.power-=actual;return actual}
+function gainPower(side,value){
+ const actual=value*side.mods.powerGainMult;side.power+=actual;
+ notifyPowerGain(side,actual);return actual;
+}
+function notifyPowerGain(side,actual){
+ if(actual>0){const opp=side===G.player?G.enemy:G.player;for(const id of opp.unitIds)if(CHARS[id].traitId==='gentle_beast'&&!opp.states[id].decisiveReady){opp.states[id].sp++;log(`${unitDisplayName(opp,id,opp.isEnemy)}「人間を襲っちゃ駄目だよ」：相手の戦力増加に反応し準備 +1（特殊技能は自動発動しない）。`,'skilllog')}}
+}
+function reducePower(side,value){if(G.noPowerLoss)return 0;let actual=value*side.mods.damageTakenMult*(side.mods.grandstandMult||1);if(side.unitIds.some(id=>CHARS[id].traitId==='reckless'))actual*=actual<=999?.5:1.5;side.power-=actual;return actual}
 
 function unitStateHTML(side,id){
   const c=CHARS[id],s=side.states[id];
@@ -582,6 +589,18 @@ function startTimer(){
   },1000);
 }
 
+function applyStrategyStartTraits(){
+ G.noPowerLoss=false;
+ for(const side of [G.player,G.enemy])side.mods.manipulation=0;
+ for(const side of [G.player,G.enemy])for(const id of side.unitIds){
+  const trait=CHARS[id].traitId,opp=side===G.player?G.enemy:G.player;
+  if(trait==='steal'){const target=opp.unitIds[Math.floor(Math.random()*opp.unitIds.length)];opp.states[target].charismaDelta=(opp.states[target].charismaDelta||0)-80;log(`「盗む」：${unitDisplayName(opp,target,opp.isEnemy)}のカリスマ -80（戦闘中永続）。`,'skilllog')}
+  if(trait==='reluctant_fighter'){const loss=reducePower(side,200);side.states[id].charismaDelta=(side.states[id].charismaDelta||0)+100;log(`${unitDisplayName(side,id,side.isEnemy)}の特性：戦力 -${fmt(loss)}、カリスマ +100。`,'skilllog')}
+ }
+}
+function consumeManipulation(side,card){
+ if(card?.type==='recruit'&&side.mods.manipulation>0){side.mods.manipulation--;log(`${side.isEnemy?'敵軍':'自軍'}の「招集」を「準備」に変更（操作）。`,'skilllog');return {...card,type:'prepare'}}return card;
+}
 async function resolveTurn(){
   clearInterval(timerId);
   showNpcLogView();
@@ -633,7 +652,7 @@ async function resolveTurn(){
 
   for(const side of [G.player,G.enemy])if(side.unitIds.some(id=>CHARS[id].traitId==='mascot')){
     const floor=side.unitIds.reduce((sum,id)=>sum+effectiveStat(side,id,'power'),0);
-    if(side.power<floor){side.power=floor;await battleStep('特性',`${side.isEnemy?'敵軍':'自軍'}「マスコット」`,`ターン終了時、戦力を全ユニットの武力合計 <strong>${fmt(floor)}</strong> に変更。`,'skill','skilllog')}
+    if(side.power<floor){notifyPowerGain(side,floor-side.power);side.power=floor;await battleStep('特性',`${side.isEnemy?'敵軍':'自軍'}「マスコット」`,`ターン終了時、戦力を全ユニットの武力合計 <strong>${fmt(floor)}</strong> に変更。`,'skill','skilllog')}
   }
   for(const [side,cards,label] of [[G.player,G.selected,'自軍'],[G.enemy,npcActions,'敵軍']]){
     const id=side.unitIds.find(unitId=>CHARS[unitId].traitId==='solo_stage'&&cards.length===4&&cards.every(card=>card?.unit===unitId));
@@ -663,6 +682,7 @@ async function resolveTurn(){
 
   $('#battleStage').classList.add('hidden');
   showNpcCommandView();
+  applyStrategyStartTraits();
   render();
   startTimer();
 }
@@ -742,6 +762,24 @@ async function applySkill(side,opp,id,label){
   let body='';
 
   switch(c.skill.id){
+    case 'manipulation':
+      opp.mods.manipulation=(opp.mods.manipulation||0)+1;
+      body='このターン、発動後に相手が使用する次の招集を準備に変更する。';break;
+    case 'escape_move':
+      G.noPowerLoss=true;body='このターン、両陣営の戦力は減少しない（決戦スキルを含む）。';break;
+    case 'ice_claw':{
+      const damage=reducePower(opp,effectiveStat(side,id,'power')*1.5);
+      let destroyed='破壊できる手札がなかった。';
+      if(opp.isEnemy){const hit=replaceFutureNpcCommand();if(hit)destroyed=`相手のターン${hit.turn}・${hit.slot}枠目の${cmdName(hit.before[1])}を破壊し、ランダムに再設定した。`;}
+      else if(G.hand.length){const hit=G.hand.splice(Math.floor(Math.random()*G.hand.length),1)[0];destroyed=`手札の「${unitDisplayName(G.player,hit.unit)}・${cmdName(hit.type)}」が破壊された。`;}
+      body=`相手戦力 -${fmt(damage)}。${destroyed}`;break;
+    }
+    case 'charge':{
+      const card=G.currentCards?.get(opp);
+      if(card?.type==='recruit')body=`相手の招集に突撃。戦力 -${fmt(reducePower(opp,effectiveStat(side,id,'power')))}。`;
+      else if(card?.type==='prepare'){const st=opp.states[card.unit];st.sp=Math.max(0,st.sp-1);body='相手の準備を1減少（この実働の特殊技能発動は取り消さない）。';}
+      else body='相手が招集・準備を使用していないため、効果なし。';break;
+    }
     case 'guerrilla':{
       const v=effectiveStat(side,id,'intel')*1.5;
       const actual=reducePower(opp,v);
@@ -936,6 +974,8 @@ async function applyDragonFragment(side,card,opponentCard,label){
 }
 
 async function resolvePair(pc,ec,n){
+  pc=consumeManipulation(G.player,pc);ec=consumeManipulation(G.enemy,ec);
+  G.currentCards=new Map([[G.player,pc],[G.enemy,ec]]);
   G.actionCount++;
   const playerTacticsActive=G.player.mods.tacticsUses>0;
   const enemyTacticsActive=G.enemy.mods.tacticsUses>0;
@@ -968,7 +1008,7 @@ async function resolvePair(pc,ec,n){
     ...ps.map(id=>({side:G.player,opp:G.enemy,id,label:'自軍'})),
     ...es.map(id=>({side:G.enemy,opp:G.player,id,label:'敵軍'}))
   ];
-  const skillPriority=id=>CHARS[id].skill.id==='binding_rope'?0:1;
+  const skillPriority=id=>CHARS[id].skill.id==='escape_move'?0:CHARS[id].skill.id==='binding_rope'?1:2;
   skillEvents.sort((a,b)=>skillPriority(a.id)-skillPriority(b.id));
 
   for(const event of skillEvents){
@@ -1026,7 +1066,7 @@ async function resolvePair(pc,ec,n){
         'sys'
       );
     }else{
-      const v=effectiveStat(G.player,pc.unit,'intel')*G.player.mods.enemySchemeMult;
+      const v=effectiveStat(G.player,pc.unit,'intel')*G.player.mods.enemySchemeMult*(CHARS[pc.unit].traitId==='intrigue'&&ec.type==='prepare'?1.5:1);
       const actual=reducePower(G.enemy,v);
       render();
 
@@ -1050,7 +1090,7 @@ async function resolvePair(pc,ec,n){
         'sys'
       );
     }else{
-      const v=effectiveStat(G.enemy,ec.unit,'intel')*G.enemy.mods.enemySchemeMult;
+      const v=effectiveStat(G.enemy,ec.unit,'intel')*G.enemy.mods.enemySchemeMult*(CHARS[ec.unit].traitId==='intrigue'&&pc?.type==='prepare'?1.5:1);
       const actual=reducePower(G.player,v);
       render();
 
@@ -1094,7 +1134,7 @@ async function checkReassembly(side,label){
   if(side.power>0)return false;
   const id=side.unitIds.find(unitId=>{const state=side.states[unitId];return CHARS[unitId].skill.id==='reassembly'&&state.reassemblyArmed&&!state.reassemblyUsed});
   if(!id)return false;
-  const state=side.states[id];state.reassemblyArmed=false;state.reassemblyUsed=true;side.power=100;render();
+  const state=side.states[id];state.reassemblyArmed=false;state.reassemblyUsed=true;notifyPowerGain(side,100-side.power);side.power=100;render();
   await battleStep('特殊技能',`${label} ${unitDisplayName(side,id,side.isEnemy)}「分解、再合体」`,'戦力が0以下になったため分解して離脱。戦力 <strong>100</strong> で復帰した！','skill','skilllog');
   return true;
 }
@@ -1146,7 +1186,7 @@ async function finalBattle(){
     await useDecisiveStep(G.player,'自軍');
   }
 
-  for(const side of [G.player,G.enemy])if(side.unitIds.some(id=>side.states[id].zeroAtFinal)){side.power=0;render();await battleStep('決戦スキル',`${side.isEnemy?'敵軍':'自軍'}「誘爆」`,'自身の戦力を0にした。','skill','skilllog');}
+  for(const side of [G.player,G.enemy])if(!G.noPowerLoss&&side.unitIds.some(id=>side.states[id].zeroAtFinal)){side.power=0;render();await battleStep('決戦スキル',`${side.isEnemy?'敵軍':'自軍'}「誘爆」`,'自身の戦力を0にした。','skill','skilllog');}
   render();
 
   let title,cls;
@@ -1178,7 +1218,7 @@ async function useCurtainCall(side,label){
   const id=side.unitIds.find(unitId=>side.states[unitId].curtainCallReady);
   if(!id)return;
   side.states[id].curtainCallReady=false;
-  const gain=effectiveStat(side,id,'power')*3;side.power+=gain;render();
+  const gain=effectiveStat(side,id,'power')*3;side.power+=gain;notifyPowerGain(side,gain);render();
   await battleStep('決戦スキル',`${label} ${unitDisplayName(side,id,side.isEnemy)}「カーテンコール」`,`武力の3.0倍、戦力 <strong>+${fmt(gain)}</strong>。`,'skill','skilllog');
 }
 
@@ -1199,18 +1239,18 @@ async function useDecisiveStep(side,label){
     return;
   }
   if(c.skill.id==='call_reinforcements'){
-    side.power+=c.skill.gain;
+    side.power+=c.skill.gain;notifyPowerGain(side,c.skill.gain);
     render();await battleStep('決戦スキル',`${label} ${unitDisplayName(side,id,side.isEnemy)}「${c.skill.name}」`,`戦力 <strong>+${fmt(c.skill.gain)}</strong>。`,'skill','skilllog');
     return;
   }
   if(c.skill.id==='dragon_transform'){
     const gain=effectiveStat(side,id,'power')*c.skill.powerMultiplier;
-    side.power+=gain;
+    side.power+=gain;notifyPowerGain(side,gain);
     render();await battleStep('決戦スキル',`${label} ${unitDisplayName(side,id,side.isEnemy)}「${c.skill.name}」`,`現在の武力の${c.skill.powerMultiplier}倍、戦力 <strong>+${fmt(gain)}</strong> → <strong>${fmt(side.power)}</strong>。`,'skill','skilllog');
     return;
   }
   const multiplier=c.skill.multiplier||1;
-  side.power=Math.floor(side.power*multiplier);
+  const before=side.power;side.power=Math.floor(side.power*multiplier);notifyPowerGain(side,side.power-before);
 
   render();
 
@@ -1271,4 +1311,5 @@ initSetup();
 </script>
 </body>
 </html>
+
 
