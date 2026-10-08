@@ -24,13 +24,14 @@
 <section id="battle" class="hidden"><div class="panel"><div id="battleTitle" class="chapter"></div><div class="unitProfiles"><div class="armyGroup"><h3>自軍</h3><div id="playerProfiles" class="unitrow"></div></div><div class="armyGroup"><h3>敵軍</h3><div id="enemyProfile" class="unitrow"></div></div></div><div class="powerBoard"><div class="powerLane"><div class="powerHead"><span>自軍戦力</span><b id="playerPower">0</b></div><div class="bar"><div id="playerFill" class="fill"></div></div></div><div class="powerLane enemy"><div class="powerHead"><span>敵戦力</span><b id="enemyPower">0</b></div><div class="bar"><div id="enemyFill" class="fill"></div></div></div></div><div class="battleDialogue"><div id="battleSpeaker" class="battleSpeaker">戦況</div><div id="battleMessage" class="battleMessage">コマンドを選択してください。</div></div></div><div id="commandPanel" class="panel"><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><h3 style="margin:0">ターン <span id="turn">1 / 3</span>　戦略フェイズ</h3><span class="small">手札から4枚を使用順に選択</span><button id="campaignForesightBtn" class="btn secondary hidden" style="margin-left:auto">見切り：8枚引き直す</button></div><div id="selection" class="selection"></div><div id="hand" class="hand"></div></div><div id="logPanel" class="panel hidden"><h3>戦闘履歴</h3><div id="log" class="log"></div></div></section>
 <section id="result" class="panel result hidden"></section></main>
 <div id="storyActions" class="actionBar hidden"><button id="autoBtn" class="btn secondary">オート</button><button id="skipBtn" class="btn secondary">一括省略</button><button id="nextBtn" class="btn">次へ</button></div><div id="battleActions" class="battleActions hidden"><button id="undoBtn" class="btn secondary">1枚戻す</button><button id="resolveBtn" class="btn" disabled>4枚を決定</button><button id="campaignAutoBtn" class="btn utility hidden">オート</button><button id="campaignSkipBtn" class="btn utility hidden">一気に最後まで</button><button id="nextTurnBtn" class="btn hidden">次のターンへ</button></div>
-<script src="characters.js?v=0.38"></script><script src="npc.js?v=0.14"></script><script src="campaign-chapters.js?v=0.3"></script><script src="campaign-chapter5.js?v=1"></script><script>
+<script src="characters.js?v=0.38"></script><script src="npc.js?v=0.14"></script><script src="campaign-chapters.js?v=0.4"></script><script src="campaign-chapter5.js?v=1"></script><script>
 const $=s=>document.querySelector(s),cmdName={recruit:'招集',scheme:'策略',prepare:'準備',blank:'何もしない'};
 let formation=['tsukune','jackeen'];try{const s=JSON.parse(localStorage.getItem('fantasyFormation'));if(Array.isArray(s)&&s.length===2&&s.every(id=>CHARS[id]))formation=s}catch(e){}if(formation[0]==='vanilla'&&formation[1]==='vanilla')formation=['vanilla','vanilla_clone'];if(CHARS[formation[0]].evolutionGroup&&CHARS[formation[0]].evolutionGroup===CHARS[formation[1]].evolutionGroup)formation=['tsukune','jackeen'];
 function campaignUnitName(id){const name=CHARS[id].name,same=formation.filter(unitId=>CHARS[unitId].name===name);return same.length>1?`${name}${String.fromCharCode(65+same.indexOf(id))}`:name}
 const playerName=()=>formation.map(id=>campaignUnitName(id)).join(' ＋ ');
 $('#formationInfo').innerHTML=`<b>現在の編成</b><br>${playerName()}`;
 
+CAMPAIGN_CHAPTER_TITLES[6]=CHAPTER_SIX_TITLE;
 const ENEMIES=CAMPAIGN_ENEMIES;
 const BATTLES=CAMPAIGN_BATTLES;
 const CHAPTERS={};
@@ -39,7 +40,7 @@ function expandStoryEvents(events){return events.flatMap(e=>e.type==='battle'?[e
 const CHAPTER_SCENES=Object.fromEntries(Object.entries(CAMPAIGN_CHAPTER_SCENES).map(([chapter,scenes])=>[chapter,Number(chapter)<=4?scenes.map(events=>events.map(event=>({...event}))):scenes.map(expandStoryEvents)]));
 const SCENE_TITLES=CAMPAIGN_SCENE_TITLES;
 const STAGES=[];
-for(const [chapterNo,scenes] of Object.entries(CHAPTER_SCENES)){let start=0;CHAPTERS[chapterNo]=[];scenes.forEach((scene,i)=>{const battleAt=scene.findIndex(e=>e.type==='battle'),stage={chapter:Number(chapterNo),scene:i+1,label:`第${chapterNo}章・シーン${i+1}`,title:SCENE_TITLES[chapterNo][i],start,length:scene.length,battle:battleAt>=0?scene[battleAt].id:null,hasBattle:battleAt>=0,hasPost:battleAt>=0&&battleAt<scene.length-1,final:i===scenes.length-1};STAGES.push(stage);CHAPTERS[chapterNo].push(...scene,{type:'sceneEnd'});start+=scene.length+1})}
+for(const [chapterNo,scenes] of Object.entries(CHAPTER_SCENES)){let start=0;CHAPTERS[chapterNo]=[];scenes.forEach((scene,i)=>{const battleAt=scene.findIndex(e=>e.type==='battle'),stage={chapter:Number(chapterNo),scene:i+1,label:`第${chapterNo}章・${Number(chapterNo)===6?'第'+(i+1)+'話':'シーン'+(i+1)}`,title:SCENE_TITLES[chapterNo][i],start,length:scene.length,battle:battleAt>=0?scene[battleAt].id:null,hasBattle:battleAt>=0,hasPost:battleAt>=0&&battleAt<scene.length-1,final:i===scenes.length-1};STAGES.push(stage);CHAPTERS[chapterNo].push(...scene,{type:'sceneEnd'});start+=scene.length+1})}
 let maxUnlocked=Math.max(0,Math.min(STAGES.length,Number(localStorage.getItem('fantasyCampaignUnlocked')||0)));
 const READ_STAGES_KEY='fantasyCampaignReadStages_v1';
 const stageReadKey=stage=>`${stage.chapter}:${stage.scene}`;
@@ -67,9 +68,9 @@ function renderStageMenu(){
    const read=isStageRead(stage),locked=i>maxUnlocked;
    const status=locked?'未解放':read?'読了済':i<maxUnlocked?'クリア済・未読':'未読';
    const action=read&&stage.hasBattle?'戦闘だけプレイ':read?'ストーリーを読み返す':'ストーリーから開始';
-   return `<div class="stageEntry"><button class="chapterBtn" data-stage="${i}" ${locked?'disabled':''}><span class="status">${status}</span><b>シーン${stage.scene}</b>${stage.title}<span class="stageAction">${action}${stage.hasBattle?'':'（戦闘なし）'}</span></button>${read&&stage.hasBattle&&!locked?`<button class="btn secondary replayStoryBtn" data-story-stage="${i}">ストーリーから再プレイ</button>`:''}</div>`;
+   return `<div class="stageEntry"><button class="chapterBtn" data-stage="${i}" ${locked?'disabled':''}><span class="status">${status}</span><b>${stage.chapter===6?'第'+stage.scene+'話':'シーン'+stage.scene}</b>${stage.title}<span class="stageAction">${action}${stage.hasBattle?'':'（戦闘なし）'}</span></button>${read&&stage.hasBattle&&!locked?`<button class="btn secondary replayStoryBtn" data-story-stage="${i}">ストーリーから再プレイ</button>`:''}</div>`;
   }).join('');
-  return `<details class="chapterFolder" data-chapter="${chapterNo}" ${Number(chapterNo)===selectedMenuChapter?'open':''}><summary><span class="small">${Number(chapterNo)>=5?'ストーリー②':'ストーリー①'}</span><b>第${chapterNo}章　${CAMPAIGN_CHAPTER_TITLES[chapterNo]||''}</b><span class="small">${unlocked?`${readCount} / ${entries.length} シーン読了`:'未解放'} ・ 戦闘${entries.filter(({stage})=>stage.hasBattle).length}回</span></summary><div class="menu chapterScenes">${scenes}</div></details>`;
+  return `<details class="chapterFolder" data-chapter="${chapterNo}" ${Number(chapterNo)===selectedMenuChapter?'open':''}><summary><span class="small">${Number(chapterNo)>=6?'ストーリー③':Number(chapterNo)>=5?'ストーリー②':'ストーリー①'}</span><b>第${chapterNo}章　${CAMPAIGN_CHAPTER_TITLES[chapterNo]||''}</b><span class="small">${unlocked?`${readCount} / ${entries.length} シーン読了`:'未解放'} ・ 戦闘${entries.filter(({stage})=>stage.hasBattle).length}回</span></summary><div class="menu chapterScenes">${scenes}</div></details>`;
  }).join('');
  document.querySelectorAll('[data-stage]:not(:disabled)').forEach(button=>button.onclick=()=>startStage(Number(button.dataset.stage)));
  document.querySelectorAll('[data-story-stage]').forEach(button=>button.onclick=()=>startStage(Number(button.dataset.storyStage),true));
@@ -111,7 +112,7 @@ function renderBattle(){
  $('#playerPower').textContent=b.powerFog?'????':Math.floor(b.playerPower);$('#enemyPower').textContent=b.powerFog?'????':Math.floor(b.enemyPower);
  $('#playerProfiles').innerHTML=formation.map(id=>campaignUnitCard(CHARS[id],campaignUnitName(id),b.playerPrep[id]||0,!!b.decisive[id],Object.fromEntries(['power','charisma','intel'].map(key=>[key,campaignStat(id,key)])),profile(CHARS[id],campaignUnitName(id)))).join('');
  const actors=b.enemy.units||{main:b.enemy};
- $('#enemyProfile').innerHTML=Object.entries(actors).map(([key,c])=>campaignUnitCard(c,c.name,b.enemyPrepUnits?.[key]||0,!!b.enemyDecisives?.[key]||b.enemyDecisive?.key===key,{power:c.powerStat*(b.enemyStatMult||1),charisma:c.charisma*(b.enemyStatMult||1),intel:c.intel*(b.enemyStatMult||1)},profile({...c,power:c.powerStat}))).join('');
+ $('#enemyProfile').innerHTML=Object.entries(actors).map(([key,c])=>campaignUnitCard(c,c.name,b.enemyPrepUnits?.[key]||0,!!b.enemyDecisives?.[key]||b.enemyDecisive?.key===key,{power:campaignEnemyStat(c,key,'power'),charisma:campaignEnemyStat(c,key,'charisma'),intel:campaignEnemyStat(c,key,'intel')},profile({...c,power:c.powerStat}))).join('');
  $('#selection').innerHTML=Array.from({length:4},(_,i)=>{const c=b.selected[i];return `<span class="slot ${c?'filled':''}"><span class="small">${i+1}枚目</span><br>${c?`${campaignUnitName(c.unit)}<br><b class="${c.type}">${cmdName[c.type]}</b>`:'未選択'}</span>`}).join('');
  $('#hand').innerHTML=b.hand.map((c,i)=>`<button class="card ${c.type}" data-uid="${c.uid}" ${b.selected.length>=4?'disabled':''}><span class="num">${i+1}</span><span class="who">${campaignUnitName(c.unit)}</span><b class="cmd">${cmdName[c.type]}</b></button>`).join('');
  document.querySelectorAll('.card').forEach(x=>x.onclick=()=>selectCard(Number(x.dataset.uid)));$('#resolveBtn').disabled=b.selected.length!==4;
@@ -121,7 +122,7 @@ function renderBattle(){
 $('#campaignForesightBtn').onclick=()=>{if(!battle||battle.turn!==1||battle.foresightRemaining<=0||battle.selected.length)return;battle.deck.push(...battle.hand);battle.hand=[];for(let i=battle.deck.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[battle.deck[i],battle.deck[j]]=[battle.deck[j],battle.deck[i]]}battle.hand.push(...battle.deck.splice(0,8));battle.foresightRemaining--;addLog('特性「見切り」：手札をすべてデッキに戻し、新しく8枚引いた。','skill');renderBattle();startCampaignTimer()};
 function selectCard(uid){const i=battle.hand.findIndex(c=>c.uid===uid);if(i<0||battle.selected.length>=4)return;battle.selected.push(battle.hand.splice(i,1)[0]);renderBattle()}$('#undoBtn').onclick=()=>{if(!battle.selected.length)return;battle.hand.push(battle.selected.pop());renderBattle()};$('#resolveBtn').onclick=resolveTurn;
 function appendCampaignLog(t,cls=''){battle.log.push(t);const d=document.createElement('div');d.className=cls;d.textContent=t;$('#log').appendChild(d);$('#log').scrollTop=$('#log').scrollHeight}
-function battleSnapshot(){return{playerPower:battle.playerPower,enemyPower:battle.enemyPower,enemyPrep:battle.enemyPrep,enemyPrepUnits:{...(battle.enemyPrepUnits||{})},playerPrep:{...battle.playerPrep},decisive:{...battle.decisive},enemyDecisive:structuredClone(battle.enemyDecisive||null),enemyDecisives:structuredClone(battle.enemyDecisives||{}),powerFog:!!battle.powerFog,statView:{playerCharismaDelta:{...(battle.playerCharismaDelta||{})},playerStatMult:battle.playerStatMult??1,enemyStatMult:battle.enemyStatMult??1,playerCharismaMult:{...(battle.playerCharismaMult||{})},playerPowerMult:{...(battle.playerPowerMult||{})},playerUnitStatMult:{...(battle.playerUnitStatMult||{})}}}}
+function battleSnapshot(){return{playerPower:battle.playerPower,enemyPower:battle.enemyPower,enemyPrep:battle.enemyPrep,enemyPrepUnits:{...(battle.enemyPrepUnits||{})},playerPrep:{...battle.playerPrep},decisive:{...battle.decisive},enemyDecisive:structuredClone(battle.enemyDecisive||null),enemyDecisives:structuredClone(battle.enemyDecisives||{}),powerFog:!!battle.powerFog,statView:{playerCharismaDelta:{...(battle.playerCharismaDelta||{})},enemyCharismaMult:{...(battle.enemyCharismaMult||{})},playerStatMult:battle.playerStatMult??1,enemyStatMult:battle.enemyStatMult??1,playerCharismaMult:{...(battle.playerCharismaMult||{})},playerPowerMult:{...(battle.playerPowerMult||{})},playerUnitStatMult:{...(battle.playerUnitStatMult||{})}}}}
 function applyBattleSnapshot(s){if(!s)return;battle.playerPower=s.playerPower;battle.enemyPower=s.enemyPower;battle.enemyPrep=s.enemyPrep;battle.enemyPrepUnits={...(s.enemyPrepUnits||{})};battle.playerPrep={...s.playerPrep};battle.decisive={...s.decisive};battle.enemyDecisive=structuredClone(s.enemyDecisive||null);battle.enemyDecisives=structuredClone(s.enemyDecisives||{});battle.powerFog=!!s.powerFog;if(s.statView)Object.assign(battle,structuredClone(s.statView));renderBattle()}
 function addLog(t,cls=''){if(campaignCollecting){campaignLogQueue.push({text:t,cls,snapshot:battleSnapshot()});return}appendCampaignLog(t,cls)}
 function campaignDisplayNumber(value){return Number(value.toFixed(2))}
@@ -156,7 +157,7 @@ function campaignTurnEndTraits(){
  }
  b.playerPower=Math.floor(b.playerPower);b.enemyPower=Math.floor(b.enemyPower);campaignCheckReassembly();
 }
-function campaignEnemyStat(actor,key,stat){return Math.max(0,(stat==='power'?(actor.powerStat??actor.power??0):(actor[stat]??0))+(stat==='charisma'?(battle.enemyCharismaDelta?.[key]||0):0))*(battle.enemyStatMult||1)}
+function campaignEnemyStat(actor,key,stat){return Math.max(0,(stat==='power'?(actor.powerStat??actor.power??0):(actor[stat]??0))+(stat==='charisma'?(battle.enemyCharismaDelta?.[key]||0):0))*(battle.enemyStatMult||1)*(stat==='charisma'?(battle.enemyCharismaMult?.[key]||1):1)}
 function campaignReducePlayer(value){if(battle.noPowerLoss)return 0;let actual=value*(battle.playerDamageMult??1)*(battle.grandstandMult??1);if(formation.some(id=>CHARS[id].traitId==='reckless'))actual*=actual<=999?.5:1.5;battle.playerPower-=actual;return actual}
 function campaignReduceEnemy(value,intelBased=false){
  if(battle.noPowerLoss)return 0;
@@ -223,9 +224,32 @@ function campaignPlayerDecisive(){
   }else {const before=battle.playerPower;battle.playerPower=Math.floor(before*value);if(battle.playerPower>before)campaignGainReaction(false);}
  }
 }
+function campaignEnemyReassemblySkill(actor,key){
+ const b=battle;
+ b.enemyReassemblyArmed??={};b.enemyReassemblyUsed??={};b.enemyReassemblyBonuses??={};
+ if(!b.enemyReassemblyUsed[key])b.enemyReassemblyArmed[key]=true;
+ if(actor.skill.id==='enemy_reassembly'){
+  b.enemyReassemblyBonuses[b.turn+1]=(b.enemyReassemblyBonuses[b.turn+1]||0)+500;
+  b.enemyReassemblyBonuses[b.turn+2]=(b.enemyReassemblyBonuses[b.turn+2]||0)+1000;
+  addLog(`${actor.name}の「分解・再合体」：次ターン+500、次の次のターン+1000。復帰は戦闘中1回のみ`,'bad');
+ }else addLog(`${actor.name}の「分解」：戦力0以下になった時、1回だけ戦力100でコアが出現`,'skill');
+}
+function campaignCheckEnemyReassembly(){
+ const b=battle;if(b.enemyPower>0)return false;
+ const key=Object.keys(b.enemyReassemblyArmed||{}).find(key=>b.enemyReassemblyArmed[key]&&!b.enemyReassemblyUsed?.[key]);
+ if(!key)return false;
+ b.enemyReassemblyArmed[key]=false;b.enemyReassemblyUsed[key]=true;b.enemyPower=100;
+ if(b.enemy.rescue){b.rescueSucceeded=true;addLog('分解：戦力100のコアが出現。ラトの救出に成功！','skill')}
+ else {campaignGainReaction(true);addLog('敵の「分解・再合体」：戦力100で復帰（復帰効果は使用済み）','bad')}
+ return true;
+}
+function campaignEnemyTurnStart(){
+ const bonus=battle.enemyReassemblyBonuses?.[battle.turn]||0;
+ if(bonus){battle.enemyPower+=bonus;campaignGainReaction(true);addLog(`敵の「再合体」：ターン開始時に戦力 +${bonus}`,'bad')}
+}
 function resolveTurn(){
  clearInterval(campaignTimerId);const b=battle,acts=b.enemy.turns[b.turn-1],initialSnapshot=battleSnapshot();campaignLogQueue=[];campaignCollecting=true;
- b.playerStatMult=1;b.enemyStatMult=b.enemyStatMult||1;b.enemyRecruitMult=1;b.playerDamageMult=b.tacticsUses>0?.5:1;b.enemyDamageTakenMult=1;b.grandstandMult=1;b.enemyGainMult=b.tacticsUses>0?.5:1;b.tacticsPending=false;b.infectionActive=false;b.infectionIntel=0;addLog(`―― ターン${b.turn} ――`);
+ b.playerStatMult=1;b.enemyStatMult=b.enemyStatMult||1;b.enemyRecruitMult=1;b.playerDamageMult=b.tacticsUses>0?.5:1;b.enemyDamageTakenMult=1;b.grandstandMult=1;b.enemyGainMult=b.tacticsUses>0?.5:1;b.tacticsPending=false;b.infectionActive=false;b.infectionIntel=0;addLog(`―― ターン${b.turn} ――`);campaignEnemyTurnStart();
  if(b.playerPower>0&&b.playerPower<2000)for(const id of formation)if(CHARS[id].traitId==='dragon_majesty'){b.playerPowerMult??={};b.playerPowerMult[id]=(b.playerPowerMult[id]||1)*campaignStatChangeMultiplier(2);addLog(`特性「逆鱗」（ターン開始時）：武力1.5倍。現在の武力 ${campaignDisplayNumber(campaignStat(id,'power'))}`,'skill')}
  const reassemblyBonus=b.reassemblyBonuses[b.turn]||0;if(reassemblyBonus){campaignGainPlayer(reassemblyBonus);addLog(`「再合体」：ターン開始時に戦力 +${reassemblyBonus}`,'skill')}
  for(let i=0;i<4;i++){
@@ -245,20 +269,23 @@ function resolveTurn(){
   for(const skill of b.pendingSkills)skill.apply();
   b.pendingSkills=[];
   if(p.type==='recruit'){if(pc.traitId==='otherworld_knowledge'){b.playerCharismaMult[p.unit]*=campaignStatChangeMultiplier(1.1);addLog(`${campaignUnitName(p.unit)}の「異世界知識」：招集前にカリスマ ${campaignDisplayNumber(b.playerCharismaMult[p.unit])}倍`,'skill')}const gain=campaignStat(p.unit,'charisma');campaignGainPlayer(gain);addLog(`${campaignUnitName(p.unit)}：招集 +${campaignDisplayNumber(gain)}`)}else if(p.type==='scheme'){if(e==='recruit')addLog(`${campaignUnitName(p.unit)}の策略は敵の招集に防がれた`);else{const damage=campaignReduceEnemy(campaignStat(p.unit,'intel')*(pc.traitId==='intrigue'&&e==='prepare'?1.5:1),true);addLog(`${campaignUnitName(p.unit)}：策略 -${damage}`)}}else if(p.type!=='prepare')addLog(`${campaignUnitName(p.unit)}：何もしない`);
-  if(e==='recruit'){const gain=campaignEnemyStat(enemyActor,enemyKey,'charisma')*b.enemyRecruitMult*b.enemyGainMult;b.enemyPower+=gain;if(gain>0)campaignGainReaction(true);addLog(`${enemyActor.name||b.enemy.name}：招集 +${gain}`)}else if(e==='scheme'){if(p.type==='recruit')addLog(`${enemyActor.name||b.enemy.name}の策略を招集で防いだ`);else{const damage=campaignReducePlayer(campaignEnemyStat(enemyActor,enemyKey,'intel')*(enemyActor.traitId==='intrigue'&&p.type==='prepare'?1.5:1));addLog(`${enemyActor.name||b.enemy.name}：策略 -${damage}`)}};
+  if(e==='recruit'){if(enemyActor.traitId==='otherworld_knowledge'){b.enemyCharismaMult??={};b.enemyCharismaMult[enemyKey]=(b.enemyCharismaMult[enemyKey]||1)*campaignStatChangeMultiplier(1.1);addLog(`${enemyActor.name}の「異世界知識」：招集前にカリスマ ${campaignDisplayNumber(b.enemyCharismaMult[enemyKey])}倍`,'bad')}const gain=campaignEnemyStat(enemyActor,enemyKey,'charisma')*b.enemyRecruitMult*b.enemyGainMult;b.enemyPower+=gain;if(gain>0)campaignGainReaction(true);addLog(`${enemyActor.name||b.enemy.name}：招集 +${gain}`)}else if(e==='scheme'){if(p.type==='recruit')addLog(`${enemyActor.name||b.enemy.name}の策略を招集で防いだ`);else{const damage=campaignReducePlayer(campaignEnemyStat(enemyActor,enemyKey,'intel')*(enemyActor.traitId==='intrigue'&&p.type==='prepare'?1.5:1));addLog(`${enemyActor.name||b.enemy.name}：策略 -${damage}`)}};
   if(e==='recruit'&&b.infectionActive){const damage=campaignReduceEnemy(b.infectionIntel,true);addLog(`「感染体」：敵軍の招集に反応し、敵戦力 -${damage}`,'skill')}
   if(tacticsActive&&--b.tacticsUses<=0){b.playerDamageMult=1;b.enemyGainMult=1;addLog('「戦術」の効果が終了した','skill')}
   if(b.tacticsPending){b.playerDamageMult=.5;b.enemyGainMult=.5;b.tacticsUses=1;b.tacticsPending=false;addLog('「戦術」の効果が次の実働だけ有効になった','skill')}
   b.playerPower=Math.floor(b.playerPower);b.enemyPower=Math.floor(b.enemyPower);
+  campaignCheckEnemyReassembly();
   addLog(`実働${i+1}終了`);
-  campaignCheckReassembly();if(b.playerPower<=0||b.enemyPower<=0)break;
+  campaignCheckReassembly();if(b.playerPower<=0||b.enemyPower<=0||b.rescueSucceeded)break;
  }
  if(formation.some(id=>CHARS[id].traitId==='mascot')){const floor=formation.reduce((sum,id)=>sum+campaignStat(id,'power'),0);if(b.playerPower<floor){b.playerPower=floor;campaignGainReaction(false);addLog(`特性「マスコット」：ターン終了時の戦力を ${campaignDisplayNumber(floor)} に変更`,'skill')}}
  const soloId=formation.find(id=>CHARS[id].traitId==='solo_stage'&&b.selected.length===4&&b.selected.every(card=>card.unit===id));if(soloId){b.playerUnitStatMult[soloId]*=campaignStatChangeMultiplier(1.3);b.soloCount[soloId]++;if(b.soloCount[soloId]>=3)b.curtainCallReady[soloId]=true;addLog(`特性「独壇場」：${campaignUnitName(soloId)}の全ステータス${campaignStatChangeMultiplier(1.3)}倍（${b.soloCount[soloId]} / 3）${b.curtainCallReady[soloId]?'／カーテンコール獲得':''}`,'skill')}
  if(b.playerPower>0&&b.enemyPower>0)campaignTurnEndTraits();
  b.selected=[];
  if(b.playerPower<=0){const win=b.enemyPower<=0&&campaignTieWin();b.afterLabel=win?'勝利結果へ':'敗北結果へ';b.afterLogs=()=>endBattle(win)}
- else if(b.enemyPower<=0){b.afterLabel='勝利結果へ';b.afterLogs=()=>endBattle(true)}
+ else if(b.rescueSucceeded){b.afterLabel='救出成功へ';b.afterLogs=()=>endBattle(true)}
+ else if(b.enemyPower<=0){const win=!b.enemy.rescue;b.afterLabel=win?'勝利結果へ':'救出失敗へ';b.afterLogs=()=>endBattle(win)}
+ else if(b.enemy.rescue&&b.turn>=(b.enemy.decisiveTurn||3)){addLog('決戦フェイズに突入。ラトの救出に失敗した','bad');b.afterLabel='救出失敗へ';b.afterLogs=()=>endBattle(false)}
  else if(b.turn>=(b.enemy.decisiveTurn||3)){
   for(const id of formation.filter(id=>b.curtainCallReady[id]).slice(0,1)){const gain=campaignStat(id,'power')*3;campaignGainPlayer(gain);b.curtainCallReady[id]=false;addLog(`${campaignUnitName(id)}の決戦スキル「カーテンコール」：戦力 +${campaignDisplayNumber(gain)}`,'skill')}
   if(b.playerPower>=b.enemyPower){campaignPlayerDecisive();campaignEnemyDecisive()}else{campaignEnemyDecisive();campaignPlayerDecisive()}
@@ -316,6 +343,7 @@ prepEnemy=function(actor=battle.enemy,key='main'){
   addLog(`${e.name||b.enemy.name}の決戦スキル「${e.skill.name}」準備完了`,'skill');return;
  }
  const apply=()=>{
+ if(['enemy_disassembly','enemy_reassembly'].includes(e.skill.id)){campaignEnemyReassemblySkill(e,key);return}
  if(e.skill.id==='manipulation'){b.playerManipulation=(b.playerManipulation||0)+1;addLog(`${e.name}の「操作」：次の招集を準備に変更`,'bad');return}
  if(e.skill.id==='escape_move'){b.noPowerLoss=true;addLog(`${e.name}の「逃げの一手」：このターン双方の戦力は減少しない`,'bad');return}
  if(e.skill.id==='ice_claw'){const damage=campaignReducePlayer(campaignEnemyStat(e,key,'power')*1.5);let text='破壊できる手札がなかった';if(b.hand.length){const hit=b.hand.splice(Math.floor(Math.random()*b.hand.length),1)[0];text=`手札の${campaignUnitName(hit.unit)}・${cmdName[hit.type]}を破壊`;}addLog(`${e.name}の「氷の爪」：戦力 -${damage}、${text}`,'bad');return}
@@ -342,10 +370,3 @@ startBattle=function(id){startBattleTraitsBase(id);battle.playerCharismaMult=Obj
 const showCampaignCommandsTraitsBase=showCampaignCommands;
 showCampaignCommands=function(){campaignStrategyStartTraits();const count=formation.filter(unitId=>CHARS[unitId].traitId==='persuasion').length;if(count){campaignGainPlayer(200*count);addLog(`特性「説得」：戦力 +${200*count}`,'skill')}showCampaignCommandsTraitsBase()};
 </script></body></html>
-
-
-
-
-
-
-
