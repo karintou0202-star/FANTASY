@@ -10,7 +10,7 @@ function runtime(saved={fantasyCampaignUnlocked:'12'}){
 }
 const r=runtime();
 r.run(`
- if(STAGES.length!==20)throw Error('stage count');
+ if(STAGES.length!==28)throw Error('stage count');
  if(STAGES.filter(s=>s.chapter===5).length!==8)throw Error('chapter five count');
  if(!isStageRead(STAGES[11])||isStageRead(STAGES[12]))throw Error('save migration');
  if(CAMPAIGN_CHAPTER_SCENES[5].flat().filter(e=>e.type==='battle').length!==3)throw Error('battle count');
@@ -61,12 +61,12 @@ r.run(`
    else nextEvent();
   }
  }
- if(!readStages.has('5:8')||maxUnlocked!==20)throw Error('chapter completion');
+ if(!readStages.has('5:8')||maxUnlocked!==28)throw Error('chapter completion');
  startStage(13);if(!battleOnly||battle.id!=='goblin_short_test')throw Error('battle replay');
  startStage(13,true);if(battleOnly)throw Error('story replay');
  renderStageMenu();
 `);
-assert.equal((r.elements.get('#stageMenu').innerHTML.match(/class="chapterFolder"/g)||[]).length,5);
+assert.equal((r.elements.get('#stageMenu').innerHTML.match(/class="chapterFolder"/g)||[]).length,6);
 const fresh=runtime({});fresh.run(`startStage(12);if(currentStageIndex!==0)throw Error('locked stage access');`);
 const saved=runtime({fantasyCampaignUnlocked:'12',fantasyCampaignReadStages_v1:'["1:1","4:4"]'});saved.run(`if(readStages.size!==2||!isStageRead(STAGES[11]))throw Error('existing read keys');`);
 console.log('PASS: chapter grouping, saved progress, 8 scenes, 3 battles, short finals, explosion, reinforcements, Goron bombs/blank cards/ties/final, existing battles, and replay transitions.');
