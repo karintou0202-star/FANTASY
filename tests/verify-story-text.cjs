@@ -17,9 +17,14 @@ r.run(`
  }
  const parenthetical=CHAPTERS[6].find(e=>e.speaker==='ロイド'&&e.text.includes('盗聴器'));
  if(!parenthetical||!parenthetical.text.includes('（盗聴器を聞きながら）'))throw Error('parenthetical detached');
- const nested='前置き'.repeat(30)+'（長い説明。途中に！疑問？があっても分けない）'+'続き'.repeat(80);
+ const nested='前置き。'.repeat(20)+'（長い説明。途中に！疑問？があっても分けない）'+'続き。'.repeat(80);
  const pages=splitStoryPages(nested);
  if(pages.join('')!==nested||pages.length<2)throw Error('page text lost');
+ if(splitStoryPages('短い会話。次の文。').length!==1)throw Error('short speech split');
+ if(splitStoryPages('長文'.repeat(100)).length!==1)throw Error('sentence split midword');
+ const atDots=splitStoryPages('あ'.repeat(50)+'。'+'い'.repeat(40)+'。'+'う'.repeat(30));
+ if(atDots[0]!=='あ'.repeat(50)+'。'||atDots[1]!=='い'.repeat(40)+'。'+'う'.repeat(30))throw Error('full stop grouping');
+ if(splitStoryPages('あ'.repeat(90)+'。'+'い'.repeat(20))[0]!=='あ'.repeat(90)+'。')throw Error('long single sentence cut');
  for(const page of pages){
   if((page.match(/（/g)||[]).length!==(page.match(/）/g)||[]).length)throw Error('parenthetical split');
  }
