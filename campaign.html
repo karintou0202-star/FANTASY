@@ -37,7 +37,7 @@ const BATTLES=CAMPAIGN_BATTLES;
 const CHAPTERS={};
 function splitStoryText(text){return text.match(/[^。！？\n]+[。！？]*|[^\n]+/g)?.map(s=>s.trim()).filter(Boolean)||[text]}
 function expandStoryEvents(events){return events.flatMap(e=>e.type==='battle'?[e]:splitStoryText(e.text).filter(text=>text!=='」').map(text=>({...e,text})))}
-const CHAPTER_SCENES=Object.fromEntries(Object.entries(CAMPAIGN_CHAPTER_SCENES).map(([chapter,scenes])=>[chapter,Number(chapter)<=4?scenes.map(events=>events.map(event=>({...event}))):scenes.map(expandStoryEvents)]));
+const CHAPTER_SCENES=Object.fromEntries(Object.entries(CAMPAIGN_CHAPTER_SCENES).map(([chapter,scenes])=>[chapter,Number(chapter)<=4||Number(chapter)>=6?scenes.map(events=>events.map(event=>({...event}))):scenes.map(expandStoryEvents)]));
 const SCENE_TITLES=CAMPAIGN_SCENE_TITLES;
 const STAGES=[];
 for(const [chapterNo,scenes] of Object.entries(CHAPTER_SCENES)){let start=0;CHAPTERS[chapterNo]=[];scenes.forEach((scene,i)=>{const battleAt=scene.findIndex(e=>e.type==='battle'),stage={chapter:Number(chapterNo),scene:i+1,label:`第${chapterNo}章・${Number(chapterNo)===6?'第'+(i+1)+'話':'シーン'+(i+1)}`,title:SCENE_TITLES[chapterNo][i],start,length:scene.length,battle:battleAt>=0?scene[battleAt].id:null,hasBattle:battleAt>=0,hasPost:battleAt>=0&&battleAt<scene.length-1,final:i===scenes.length-1};STAGES.push(stage);CHAPTERS[chapterNo].push(...scene,{type:'sceneEnd'});start+=scene.length+1})}
@@ -88,13 +88,43 @@ function startStage(i,withStory=false){
  $('#story').classList.remove('hidden');$('#storyActions').classList.remove('hidden');showEvent();
 }
 function renderStoryProgress(){const span=Math.max(1,currentStage.length),done=Math.min(span,pos-currentStage.start+1);$('#storyProgress').innerHTML=Array.from({length:Math.min(8,span)},(_,i)=>`<i class="${i/Math.min(8,span)<done/span?'on':''}"></i>`).join('')}
-function completeStoryTyping(){if(!storyTyping)return;clearInterval(storyTypingTimer);storyTyping=false;$('#text').textContent=storyFullText;$('#advanceMark').classList.add('show');$('#nextBtn').disabled=false;scheduleStoryAdvance()}
-function typeStoryText(text){clearInterval(storyTypingTimer);storyFullText=text;storyTyping=true;$('#text').textContent='';$('#advanceMark').classList.remove('show');$('#nextBtn').disabled=true;if(matchMedia('(prefers-reduced-motion: reduce)').matches){completeStoryTyping();return}const chars=Array.from(text);let at=0;storyTypingTimer=setInterval(()=>{at=Math.min(chars.length,at+2);$('#text').textContent=chars.slice(0,at).join('');if(at>=chars.length)completeStoryTyping()},28)}
+let storyPages=[],storyPageIndex=0;
+function splitStoryPages(text,limit=80){
+ const pages=[],stack=[],closers={'（':'）','(':')','「':'」','『':'』','【':'】','［':'］'};
+ let page='';
+ for(const char of Array.from(text)){
+  // Parentheses and nested quotations always remain in the same reveal step.
+  if(closers[char])stack.push(closers[char]);
+  else if(char===stack[stack.length-1])stack.pop();
+  page+=char;
+  const size=Array.from(page).length;
+  if(!stack.length&&(size>=limit||(size>=limit*.75&&/[。！？\n]/.test(char)))){pages.push(page);page=''}
+ }
+ if(page||!pages.length)pages.push(page);
+ return pages;
+}
+function completeStoryTyping(){
+ if(!storyTyping)return;
+ clearInterval(storyTypingTimer);storyTyping=false;$('#text').textContent=storyFullText;
+ $('#advanceMark').classList.add('show');$('#nextBtn').disabled=false;
+ $('#nextBtn').textContent=storyPageIndex<storyPages.length-1?'続きを表示':'次へ';scheduleStoryAdvance();
+}
+function typeStoryPage(){
+ clearInterval(storyTypingTimer);
+ const prefix=storyPages.slice(0,storyPageIndex).join(''),chars=Array.from(storyPages[storyPageIndex]);
+ storyFullText=prefix+chars.join('');storyTyping=true;$('#text').textContent=prefix;
+ $('#advanceMark').classList.remove('show');$('#nextBtn').disabled=false;$('#nextBtn').textContent='表示を完了';
+ if(matchMedia('(prefers-reduced-motion: reduce)').matches){completeStoryTyping();return}
+ let at=0;storyTypingTimer=setInterval(()=>{at=Math.min(chars.length,at+2);$('#text').textContent=prefix+chars.slice(0,at).join('');if(at>=chars.length)completeStoryTyping()},28);
+}
+function typeStoryText(text){
+ storyPages=chapter>=6?splitStoryPages(text):[text];storyPageIndex=0;typeStoryPage();
+}
 function scheduleStoryAdvance(){clearTimeout(autoTimer);if(auto&&!storyTyping)autoTimer=setTimeout(nextEvent,900)}
 function campaignSpeakerTone(name=''){if(name.startsWith('ココ'))return'tone-coco';if(name.startsWith('ゴロン'))return'tone-goron';if(name.startsWith('黒騎士'))return'tone-black-knight';if(name.startsWith('ロイド'))return'tone-lloyd';if(name.startsWith('オリンポス'))return'tone-olympus';if(name.startsWith('エイジ'))return'tone-eiji';if(name.startsWith('メイラン'))return'tone-meilan';if(name.startsWith('ロウジャ'))return'tone-lowja';if(name.startsWith('GGGゴーレム'))return'tone-ggg';if(name.startsWith('魔王軍の使者'))return'tone-demon';if(name.startsWith('ツクネ'))return'tone-tsukune';if(name.startsWith('リーリア'))return'tone-lilia';if(name.includes('ジャキーン'))return'tone-jackeen';if(name.includes('ザザン'))return'tone-zazan';if(name.startsWith('ソレナリフ'))return'tone-solenarif';if(name.startsWith('ギガガルド'))return'tone-gigagald';if(name.startsWith('アゾアラス'))return'tone-azoaras';return'tone-other'}
 new MutationObserver(()=>{const el=$('#battleSpeaker');if(el)el.className='battleSpeaker '+campaignSpeakerTone(el.textContent)}).observe(document.body,{subtree:true,childList:true,characterData:true});
 function showEvent(){clearTimeout(autoTimer);const events=CHAPTERS[chapter];if(pos>=events.length)return finishStage();const e=events[pos];if(e.type==='sceneEnd')return finishStage();if(e.type==='battle'){returnPos=pos+1;startBattle(e.id);return}renderStoryProgress();$('#chapterLabel').textContent=currentStage.label;$('#storyContent').className=e.type==='narration'?'narration':e.type==='notice'?'notice':'';$('#speaker').textContent=e.speaker||'';$('#speaker').className='speaker '+campaignSpeakerTone(e.speaker);typeStoryText(e.text)}
-function nextEvent(){if(storyTyping){completeStoryTyping();return}pos++;showEvent()}$('#nextBtn').onclick=nextEvent;
+function nextEvent(){if(storyTyping){completeStoryTyping();return}if(storyPageIndex<storyPages.length-1){clearTimeout(autoTimer);storyPageIndex++;typeStoryPage();return}pos++;showEvent()}$('#nextBtn').onclick=nextEvent;
 $('#story').onclick=e=>{if(e.target.closest('button,a'))return;nextEvent()};$('#story').onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();nextEvent()}};
 $('#autoBtn').onclick=()=>{auto=!auto;$('#autoBtn').textContent=auto?'オート停止':'オート';clearTimeout(autoTimer);if(auto){if(storyTyping)completeStoryTyping();else scheduleStoryAdvance()}};
 let skipArmed=false;$('#skipBtn').onclick=()=>{if(!skipArmed){skipArmed=true;$('#skipBtn').textContent='もう一度押して省略';setTimeout(()=>{skipArmed=false;$('#skipBtn').textContent='一括省略'},3000);return}skipArmed=false;clearInterval(storyTypingTimer);storyTyping=false;const events=CHAPTERS[chapter];let i=pos+1;while(i<events.length&&!['battle','sceneEnd'].includes(events[i].type))i++;pos=i;$('#skipBtn').textContent='一括省略';showEvent()};
