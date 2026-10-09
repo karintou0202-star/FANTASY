@@ -90,15 +90,20 @@ function startStage(i,withStory=false){
 function renderStoryProgress(){const span=Math.max(1,currentStage.length),done=Math.min(span,pos-currentStage.start+1);$('#storyProgress').innerHTML=Array.from({length:Math.min(8,span)},(_,i)=>`<i class="${i/Math.min(8,span)<done/span?'on':''}"></i>`).join('')}
 let storyPages=[],storyPageIndex=0;
 function splitStoryPages(text,limit=80){
- const pages=[],stack=[],closers={'（':'）','(':')','「':'」','『':'』','【':'】','［':'］'};
- let page='';
+ if(Array.from(text).length<=limit)return [text];
+ const sentences=[],pages=[],stack=[],closers={'（':'）','(':')','「':'」','『':'』','【':'】','［':'］'};
+ let sentence='',page='';
  for(const char of Array.from(text)){
-  // Parentheses and nested quotations always remain in the same reveal step.
   if(closers[char])stack.push(closers[char]);
   else if(char===stack[stack.length-1])stack.pop();
-  page+=char;
-  const size=Array.from(page).length;
-  if(!stack.length&&(size>=limit||(size>=limit*.75&&/[。！？\n]/.test(char)))){pages.push(page);page=''}
+  sentence+=char;
+  // Use full stops outside parentheses/quotations, never a character cutoff.
+  if(char==='。'&&!stack.length){sentences.push(sentence);sentence=''}
+ }
+ if(sentence)sentences.push(sentence);
+ for(const part of sentences){
+  if(page&&Array.from(page+part).length>limit){pages.push(page);page=''}
+  page+=part;
  }
  if(page||!pages.length)pages.push(page);
  return pages;
