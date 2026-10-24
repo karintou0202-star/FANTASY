@@ -1830,6 +1830,8 @@ const CAMPAIGN_ENEMIES={
     "intel": 500,
     "skill": {
       "id": "grandstand",
+      "damageMultiplier": 1.7,
+      "damageTakenMultiplier": 1.5,
       "name": "大立ち回り",
       "cost": 2,
       "text": "このターン相手と自分が受ける戦力減少を1.5倍にし、相手の戦力を知略の1.7倍減少"
@@ -1866,6 +1868,8 @@ const CAMPAIGN_ENEMIES={
     "intel": 500,
     "skill": {
       "id": "grandstand",
+      "damageMultiplier": 1.7,
+      "damageTakenMultiplier": 1.5,
       "name": "大立ち回り",
       "cost": 2,
       "text": "このターン相手と自分が受ける戦力減少を1.5倍にし、相手の戦力を知略の1.7倍減少"
@@ -2344,3 +2348,4 @@ Object.assign(CAMPAIGN_BATTLES,{
  chapter6_rescue:{enemy:'chapter6_rescue',title:'ガッシャーン戦・ラトの救出',lose:[['紅蓮','失敗したか…。ラトが無事であることを願うしかないな。ラトの救出には、相手の戦力を100ちょうどにしないといけない。\nそのためには、特殊技能の発動後、戦力を0にする必要があるんだ。\n決戦フェイズに入ればラトの命が危ない。その前に条件を満たして、次こそラトを救ってくれ。']]},
  chapter6_eiji_gasshaan:{enemy:'chapter6_eiji_gasshaan',title:'エイジ＋ガッシャーン戦',lose:[['オリンポス','このコンビ強いよね。エイジの招集は異世界知識でどんどん強くなるし、ガッシャーンが2ターン目から戦力を大幅アップ+戦力0耐性を入れてくる。厳しいけど招集デッキで戦力を増やして隙に策略を入れるのが勝ち筋になりそうだ。策略を入れるなら1ターン目が隙が多いから、狙ってみるといいかもね']]}
 });
+

@@ -28,6 +28,7 @@ const checked=runtime();checked.run(`
  if(battle.grandstandMult!==1)throw Error('turn two must remain unboosted');
  formation=['gigagald','vanilla'];startBattle('zazan');battle.playerPower=battle.enemyPower=100000;
  battle.enemy.turns[0]=['blank','blank','blank','blank'];battle.selected=[{unit:'gigagald',type:'prepare'},{unit:'gigagald',type:'prepare'},...Array.from({length:2},()=>({unit:'vanilla',type:'blank'}))];
- resolveTurn();while(campaignLogQueue.length)advanceCampaignLog();if(battle.grandstandMult!==1.5)throw Error('player skill activation');
+ resolveTurn();while(campaignLogQueue.length)advanceCampaignLog();if(battle.grandstandMult!==2)throw Error('player skill activation');
  advanceCampaignLog();if(battle.grandstandMult!==1)throw Error('player skill expiry');
  `);console.log('PASS: enemy and player grandstand expire before next strategy; activation turn, log snapshots, fire/reckless, and turn-two damage.');
+

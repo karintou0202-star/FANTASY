@@ -153,7 +153,7 @@ select{width:100%;padding:12px;background:#111722;color:var(--text);border:1px s
 </div>
 
 <!-- 先にデータを読み込み、その後ゲーム本体を実行します -->
-<script src="characters.js?v=0.38"></script>
+<script src="characters.js?v=0.39"></script>
 <script src="npc.js?v=0.14"></script>
 
 <script>
@@ -917,9 +917,10 @@ async function applySkill(side,opp,id,label){
     }
 
     case 'grandstand':{
-      side.mods.grandstandMult=(side.mods.grandstandMult||1)*1.5;opp.mods.grandstandMult=(opp.mods.grandstandMult||1)*1.5;
-      const actual=reducePower(opp,effectiveStat(side,id,'intel')*1.7);
-      body=`このターン中、双方の戦力減少量を1.5倍にする。さらに相手戦力を <strong>-${fmt(actual)}</strong>。`;
+      const multiplier=c.skill.damageTakenMultiplier??2;
+      side.mods.grandstandMult=(side.mods.grandstandMult||1)*multiplier;opp.mods.grandstandMult=(opp.mods.grandstandMult||1)*multiplier;
+      const actual=reducePower(opp,effectiveStat(side,id,'intel')*(c.skill.damageMultiplier??2));
+      body=`このターン中、双方の戦力減少量を${multiplier}倍にする。さらに相手戦力を <strong>-${fmt(actual)}</strong>。`;
       break;
     }
 
@@ -1322,6 +1323,7 @@ initSetup();
 </script>
 </body>
 </html>
+
 
 
 
