@@ -30,5 +30,12 @@
   function setDebugFormation(ids){if(!Array.isArray(ids)||ids.length!==2)throw Error('two units required');storage.setItem(DEBUG_FORMATION,JSON.stringify(ids))}
   return {load,update,debugEnabled,getDebugFormation,setDebugFormation};
  }
- const api={create,KEY,DEBUG_FORMATION};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.FantasyPlayerData=api;
+ function connect(){
+  const store=create(localStorage),debug=store.debugEnabled(location.search);
+  const result={store,debug,data:null,error:null};
+  try{result.data=debug?null:store.load()}catch(e){result.error=e;console.error('Player data unavailable:',e)}
+  if(debug)document.addEventListener('DOMContentLoaded',()=>document.querySelectorAll('a[href]').forEach(a=>{const u=new URL(a.href,location.href);if(u.origin===location.origin&&/\.html$/.test(u.pathname)){u.searchParams.set('fantasyDebug','1');a.href=u.href}}));
+  return result;
+ }
+ const api={create,connect,KEY,DEBUG_FORMATION};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.FantasyPlayerData=api;
 })(typeof globalThis!=='undefined'?globalThis:this);
