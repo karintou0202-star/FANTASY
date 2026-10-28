@@ -30,12 +30,31 @@
   function setDebugFormation(ids){if(!Array.isArray(ids)||ids.length!==2)throw Error('two units required');storage.setItem(DEBUG_FORMATION,JSON.stringify(ids))}
   return {load,update,debugEnabled,getDebugFormation,setDebugFormation};
  }
+ function validateFormation(ids,chars,owned,debug=false){
+  if(!Array.isArray(ids)||ids.length!==2)return 'ユニットを2体選択してください。';
+  const normalized=ids[0]==='vanilla'&&ids[1]==='vanilla'?['vanilla','vanilla_clone']:ids;
+  const pair=normalized.map(id=>chars[id]);
+  if(pair.some((c,i)=>!c||(c.selectable===false&&normalized[i]!=='vanilla_clone')))return '編成できないユニットが含まれています。';
+  if(!debug&&(!Array.isArray(owned)||normalized.some(id=>!owned.includes(id))))return '未所持のユニットは編成できません。';
+  if(normalized[0]===normalized[1]||((normalized.includes('vanilla_clone'))&&!normalized.includes('vanilla')))return '同一ユニットは2体編成できません。';
+  if(pair[0].evolutionGroup&&pair[0].evolutionGroup===pair[1].evolutionGroup)return '同一人物の真価前後は同時に編成できません。';
+  if(pair[0].rarity+pair[1].rarity>7)return '合計レア度は7以下にしてください。';
+  return '';
+ }
+ function formationError(context,ids,chars){try{return validateFormation(ids,chars,context.debug?[]:context.store.load().owned,context.debug)}catch(e){return 'セーブデータを読み込めません。'}}
+ function correctFormation(context,ids,chars){
+  if(!formationError(context,ids,chars))return ids;
+  const fallback=['vanilla','vanilla_clone'];
+  if(context.debug)context.store.setDebugFormation(fallback);
+  else if(!context.error){localStorage.setItem('fantasyFormation',JSON.stringify(fallback));context.store.update('repair:'+Date.now()+':'+Math.random(),d=>{d.normalFormation=fallback.slice()})}
+  return fallback;
+ }
  function connect(){
   const store=create(localStorage),debug=store.debugEnabled(location.search);
   const result={store,debug,data:null,error:null};
   try{result.data=debug?null:store.load()}catch(e){result.error=e;console.error('Player data unavailable:',e)}
-  if(debug)document.addEventListener('DOMContentLoaded',()=>document.querySelectorAll('a[href]').forEach(a=>{const u=new URL(a.href,location.href);if(u.origin===location.origin&&/\.html$/.test(u.pathname)){u.searchParams.set('fantasyDebug','1');a.href=u.href}}));
+  if(debug)document.addEventListener('DOMContentLoaded',()=>{const badge=document.createElement('span');badge.textContent='DEBUG';badge.style.cssText='position:fixed;top:4px;right:4px;z-index:9999;background:#933;color:white;font:12px sans-serif;padding:3px 6px';document.body.appendChild(badge);document.querySelectorAll('a[href]').forEach(a=>{const u=new URL(a.href,location.href);if(u.origin===location.origin&&/\.html$/.test(u.pathname)){u.searchParams.set('fantasyDebug','1');a.href=u.href}})});
   return result;
  }
- const api={create,connect,KEY,DEBUG_FORMATION};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.FantasyPlayerData=api;
+ const api={create,connect,validateFormation,formationError,correctFormation,KEY,DEBUG_FORMATION};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.FantasyPlayerData=api;
 })(typeof globalThis!=='undefined'?globalThis:this);
