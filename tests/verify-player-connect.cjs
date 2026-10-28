@@ -1,0 +1,7 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert/strict');
+const data=fs.readFileSync('player-data.js','utf8'),map=new Map();const storage={getItem:k=>map.get(k)??null,setItem:(k,v)=>map.set(k,String(v))};
+function open(search){const ctx=vm.createContext({localStorage:storage,location:{search,href:'https://example.test/FANTASY/index.html'},URLSearchParams,URL,console,document:{addEventListener(){}}});vm.runInContext(data,ctx);return ctx.FantasyPlayerData.connect()}
+let c=open('?fantasyDebug=1');assert.equal(c.debug,true);assert.equal(map.size,0);c.store.setDebugFormation(['hero_lloyd','coco']);assert.equal(map.has('fantasyPlayerData_v1'),false);
+c=open('');assert.equal(c.debug,false);assert.ok(c.data);const save=map.get('fantasyPlayerData_v1');assert.equal(open('').data.version,1);assert.equal(map.get('fantasyPlayerData_v1'),save);assert.deepEqual(Array.from(open('?fantasyDebug=1').store.getDebugFormation()),['hero_lloyd','coco']);
+for(const p of ['formation-preview.html','index.html','campaign.html','story.html']){const s=fs.readFileSync(p,'utf8');assert.ok(s.includes('player-data.js'));assert.ok(s.includes('FantasyPlayerData.connect()'));for(const m of s.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g))new vm.Script(m[1]);}
+console.log('PASS: debug-only access does not initialize normal save, normal initialization persists across pages, debug formation is separate, four pages load shared module');
