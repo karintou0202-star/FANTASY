@@ -35,11 +35,12 @@
 </main>
 <div class="actionBar"><div class="actionRow"><button class="btn secondary" onclick="history.back()">戻る</button><button id="npcBtn" class="btn">NPC戦へ</button><button id="storyBtn" class="btn story">ストーリー攻略戦へ</button></div></div>
 <script src="characters.js?v=0.39"></script>
-<script src="player-data.js?v=1"></script><script>const playerContext=FantasyPlayerData.connect();</script><script>
+<script src="player-data.js?v=2"></script><script>const playerContext=FantasyPlayerData.connect();</script><script>
 const $=s=>document.querySelector(s);
 const allowed=['tsukune','jackeen','lowja','ggg','guren','zazan','larin','crow','bonret','vanilla','olympus','hero_lloyd','eiji','solenarif','solenarif_spy','arle','gasshaan','donbura','anmi','azoaras','gigagald','hikake','coco','kurukku','flame_azote','meilan','hinata','karzuf','ice','emon','kattole'];
-let formation=['tsukune','jackeen'];
+let formation=['vanilla','vanilla_clone'];
 try{const saved=playerContext.debug?playerContext.store.getDebugFormation():JSON.parse(localStorage.getItem('fantasyFormation'));if(Array.isArray(saved)&&saved.length===2&&saved.every(id=>allowed.includes(id)&&CHARS[id]))formation=saved}catch(e){}
+formation=FantasyPlayerData.correctFormation(playerContext,formation,CHARS);if(formation[1]==='vanilla_clone')formation[1]='vanilla';
 let target=0;
 let page=1;
 const pageSize=6;
@@ -59,14 +60,7 @@ function unitHTML(id,index){
   <div class="trait"><strong>特性</strong><br>${c.trait||'なし'}</div>
  </article>`;
 }
-function validate(){
- const [a,b]=formation.map(id=>CHARS[id]);
- if(!a||!b)return 'ユニットを2体選択してください。';
- if(formation[0]===formation[1]&&!canDuplicate(a))return '同名ユニットを2体編成できるのは、許可する特性を持つユニットだけです。';
- if(a.evolutionGroup&&a.evolutionGroup===b.evolutionGroup)return '通常ユニットと同じ人物の真価ユニットは同時に編成できません。';
- if(a.rarity+b.rarity>=8)return '合計レア度が8以上のため編成できません。7以下になるよう変更してください。';
- return '';
-}
+function validate(){return FantasyPlayerData.formationError(playerContext,formation,CHARS)}
 function render(){
  const chars=formation.map(id=>CHARS[id]).filter(Boolean);
  $('#slots').innerHTML=formation.map(unitHTML).join('');
@@ -83,7 +77,7 @@ function render(){
  const filtered=sortUnits(allowed.filter(id=>{const c=CHARS[id];return !query||`${formationName(c)} ${c.name} ${c.role} ${c.race}`.toLowerCase().includes(query)}));
  const pages=Math.max(1,Math.ceil(filtered.length/pageSize));page=Math.min(page,pages);
  const shown=filtered.slice((page-1)*pageSize,page*pageSize);
- $('#unitList').innerHTML=shown.length?shown.map(id=>{const c=CHARS[id],other=CHARS[formation[1-target]];const duplicate=formation[1-target]===id&&!canDuplicate(c),sameEvolution=Boolean(c.evolutionGroup&&other?.evolutionGroup===c.evolutionGroup);return `<button class="unitBtn ${formation[target]===id?'selected':''}" data-id="${id}" ${duplicate||sameEvolution?'disabled':''}><em>★${c.rarity}</em><b>${label(id)}</b><span>${c.role}・戦力${c.power}</span></button>`}).join(''):'<p class="muted">該当するユニットはいません。</p>';
+ $('#unitList').innerHTML=shown.length?shown.map(id=>{const c=CHARS[id],other=CHARS[formation[1-target]];const owned=playerContext.debug||(!playerContext.error&&playerContext.store.load().owned.includes(id)),duplicate=formation[1-target]===id&&!canDuplicate(c),sameEvolution=Boolean(c.evolutionGroup&&other?.evolutionGroup===c.evolutionGroup);return `<button class="unitBtn ${formation[target]===id?'selected':''}" data-id="${id}" ${!owned||duplicate||sameEvolution?'disabled':''}><em>★${c.rarity}</em><b>${label(id)}</b><span>${c.role}・戦力${c.power}${owned?'':'・未所持'}</span></button>`}).join(''):'<p class="muted">該当するユニットはいません。</p>';
  $('#pageText').textContent=`ページ ${page} / ${pages}`;$('#prevPage').disabled=page<=1;$('#nextPage').disabled=page>=pages;
  document.querySelectorAll('.unitBtn:not(:disabled)').forEach(btn=>btn.onclick=()=>{formation[target]=btn.dataset.id;target=target===0?1:0;saveFormation();render()});
 }
