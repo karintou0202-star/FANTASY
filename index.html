@@ -156,8 +156,8 @@ select{width:100%;padding:12px;background:#111722;color:var(--text);border:1px s
 <script src="characters.js?v=0.39"></script>
 <script src="npc.js?v=0.14"></script>
 
-<script src="player-data.js?v=1"></script><script>const playerContext=FantasyPlayerData.connect();</script><script>
-let G=null, timerId=null, setupFormation=['tsukune','lowja'];
+<script src="player-data.js?v=2"></script><script>const playerContext=FantasyPlayerData.connect();</script><script>
+let G=null, timerId=null, setupFormation=['vanilla','vanilla_clone'];
 let logFlow={auto:false,skip:false,resolver:null};
 let npcSkipArmed=false,npcSkipTimer=null;
 const $=s=>document.querySelector(s);
@@ -189,6 +189,7 @@ function initSetup(){
     const saved=playerContext.debug?playerContext.store.getDebugFormation():JSON.parse(localStorage.getItem('fantasyFormation'));
     if(Array.isArray(saved)&&saved.length===2&&saved.every(id=>CHARS[id]&&(!playerContext.debug||CHARS[id].selectable!==false||id==='vanilla_clone')))setupFormation=saved;
   }catch(e){}
+  setupFormation=FantasyPlayerData.correctFormation(playerContext,setupFormation,CHARS);
   const [savedA,savedB]=setupFormation.map(id=>CHARS[id]);
   if(savedA.evolutionGroup&&savedA.evolutionGroup===savedB.evolutionGroup)setupFormation=['tsukune','lowja'];
 
@@ -404,6 +405,7 @@ function start(){
 function startMatch(mode,npcId,run=null,selectedUnits=null){
   const playerUnits=run?.playerUnits||selectedUnits||normalizePlayerUnits(setupFormation);
 
+  const error=FantasyPlayerData.formationError(playerContext,playerUnits,CHARS);if(error){alert(error);return}
   const npc=NPCS[npcId];
   const deck=shuffle(makeDeck(playerUnits));
 
