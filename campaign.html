@@ -24,9 +24,9 @@
 <section id="battle" class="hidden"><div class="panel"><div id="battleTitle" class="chapter"></div><div class="unitProfiles"><div class="armyGroup"><h3>自軍</h3><div id="playerProfiles" class="unitrow"></div></div><div class="armyGroup"><h3>敵軍</h3><div id="enemyProfile" class="unitrow"></div></div></div><div class="powerBoard"><div class="powerLane"><div class="powerHead"><span>自軍戦力</span><b id="playerPower">0</b></div><div class="bar"><div id="playerFill" class="fill"></div></div></div><div class="powerLane enemy"><div class="powerHead"><span>敵戦力</span><b id="enemyPower">0</b></div><div class="bar"><div id="enemyFill" class="fill"></div></div></div></div><div class="battleDialogue"><div id="battleSpeaker" class="battleSpeaker">戦況</div><div id="battleMessage" class="battleMessage">コマンドを選択してください。</div></div></div><div id="commandPanel" class="panel"><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><h3 style="margin:0">ターン <span id="turn">1 / 3</span>　戦略フェイズ</h3><span class="small">手札から4枚を使用順に選択</span><button id="campaignForesightBtn" class="btn secondary hidden" style="margin-left:auto">見切り：8枚引き直す</button></div><div id="selection" class="selection"></div><div id="hand" class="hand"></div></div><div id="logPanel" class="panel hidden"><h3>戦闘履歴</h3><div id="log" class="log"></div></div></section>
 <section id="result" class="panel result hidden"></section></main>
 <div id="storyActions" class="actionBar hidden"><button id="autoBtn" class="btn secondary">オート</button><button id="skipBtn" class="btn secondary">一括省略</button><button id="nextBtn" class="btn">次へ</button></div><div id="battleActions" class="battleActions hidden"><button id="undoBtn" class="btn secondary">1枚戻す</button><button id="resolveBtn" class="btn" disabled>4枚を決定</button><button id="campaignAutoBtn" class="btn utility hidden">オート</button><button id="campaignSkipBtn" class="btn utility hidden">一気に最後まで</button><button id="nextTurnBtn" class="btn hidden">次のターンへ</button></div>
-<script src="characters.js?v=0.39"></script><script src="npc.js?v=0.14"></script><script src="campaign-chapters.js?v=0.5"></script><script src="campaign-chapter5.js?v=2"></script><script>
+<script src="characters.js?v=0.39"></script><script src="npc.js?v=0.14"></script><script src="campaign-chapters.js?v=0.5"></script><script src="campaign-chapter5.js?v=2"></script><script src="player-data.js?v=1"></script><script>const playerContext=FantasyPlayerData.connect();</script><script>
 const $=s=>document.querySelector(s),cmdName={recruit:'招集',scheme:'策略',prepare:'準備',blank:'何もしない'};
-let formation=['tsukune','jackeen'];try{const s=JSON.parse(localStorage.getItem('fantasyFormation'));if(Array.isArray(s)&&s.length===2&&s.every(id=>CHARS[id]))formation=s}catch(e){}if(formation[0]==='vanilla'&&formation[1]==='vanilla')formation=['vanilla','vanilla_clone'];if(CHARS[formation[0]].evolutionGroup&&CHARS[formation[0]].evolutionGroup===CHARS[formation[1]].evolutionGroup)formation=['tsukune','jackeen'];
+let formation=['tsukune','jackeen'];try{const s=playerContext.debug?playerContext.store.getDebugFormation():JSON.parse(localStorage.getItem('fantasyFormation'));if(Array.isArray(s)&&s.length===2&&s.every(id=>CHARS[id]&&(!playerContext.debug||CHARS[id].selectable!==false||id==='vanilla_clone')))formation=s}catch(e){}if(formation[0]==='vanilla'&&formation[1]==='vanilla')formation=['vanilla','vanilla_clone'];if(CHARS[formation[0]].evolutionGroup&&CHARS[formation[0]].evolutionGroup===CHARS[formation[1]].evolutionGroup)formation=['tsukune','jackeen'];
 function campaignUnitName(id){const name=CHARS[id].name,same=formation.filter(unitId=>CHARS[unitId].name===name);return same.length>1?`${name}${String.fromCharCode(65+same.indexOf(id))}`:name}
 const playerName=()=>formation.map(id=>campaignUnitName(id)).join(' ＋ ');
 $('#formationInfo').innerHTML=`<b>現在の編成</b><br>${playerName()}`;
@@ -41,8 +41,8 @@ const CHAPTER_SCENES=Object.fromEntries(Object.entries(CAMPAIGN_CHAPTER_SCENES).
 const SCENE_TITLES=CAMPAIGN_SCENE_TITLES;
 const STAGES=[];
 for(const [chapterNo,scenes] of Object.entries(CHAPTER_SCENES)){let start=0;CHAPTERS[chapterNo]=[];scenes.forEach((scene,i)=>{const battleAt=scene.findIndex(e=>e.type==='battle'),stage={chapter:Number(chapterNo),scene:i+1,label:`第${chapterNo}章・${Number(chapterNo)===6?'第'+(i+1)+'話':'シーン'+(i+1)}`,title:SCENE_TITLES[chapterNo][i],start,length:scene.length,battle:battleAt>=0?scene[battleAt].id:null,hasBattle:battleAt>=0,hasPost:battleAt>=0&&battleAt<scene.length-1,final:i===scenes.length-1};STAGES.push(stage);CHAPTERS[chapterNo].push(...scene,{type:'sceneEnd'});start+=scene.length+1})}
-let maxUnlocked=Math.max(0,Math.min(STAGES.length,Number(localStorage.getItem('fantasyCampaignUnlocked')||0)));
-const READ_STAGES_KEY='fantasyCampaignReadStages_v1';
+let maxUnlocked=Math.max(0,Math.min(STAGES.length,Number(localStorage.getItem((playerContext.debug?'fantasyDebugCampaignUnlocked':'fantasyCampaignUnlocked'))||0)));
+const READ_STAGES_KEY=(playerContext.debug?'fantasyDebugCampaignReadStages_v1':'fantasyCampaignReadStages_v1');
 const stageReadKey=stage=>`${stage.chapter}:${stage.scene}`;
 let readStages=new Set();
 try{
@@ -338,7 +338,7 @@ function cleanupBattle(){resetCampaignLogControls();$('#battle').classList.add('
 function finishStage(){
  clearTimeout(autoTimer);clearInterval(storyTypingTimer);storyTyping=false;
  if(!battleOnly){readStages.add(stageReadKey(currentStage));try{localStorage.setItem(READ_STAGES_KEY,JSON.stringify([...readStages]))}catch(e){}}
- maxUnlocked=Math.max(maxUnlocked,Math.min(STAGES.length,currentStageIndex+1));localStorage.setItem('fantasyCampaignUnlocked',String(maxUnlocked));
+ maxUnlocked=Math.max(maxUnlocked,Math.min(STAGES.length,currentStageIndex+1));localStorage.setItem((playerContext.debug?'fantasyDebugCampaignUnlocked':'fantasyCampaignUnlocked'),String(maxUnlocked));
  $('#story').classList.add('hidden');$('#storyActions').classList.add('hidden');$('#battle').classList.add('hidden');$('#result').classList.remove('hidden');
  scrollToBattleResult();
  const hasNext=currentStageIndex<STAGES.length-1;
@@ -405,6 +405,3 @@ startBattle=function(id){startBattleTraitsBase(id);battle.playerCharismaMult=Obj
 const showCampaignCommandsTraitsBase=showCampaignCommands;
 showCampaignCommands=function(){campaignStrategyStartTraits();const count=formation.filter(unitId=>CHARS[unitId].traitId==='persuasion').length;if(count){campaignGainPlayer(200*count);addLog(`特性「説得」：戦力 +${200*count}`,'skill')}showCampaignCommandsTraitsBase()};
 </script></body></html>
-
-
-
