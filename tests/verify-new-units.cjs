@@ -2,7 +2,7 @@ const fs=require('fs'),vm=require('vm'),assert=require('assert');
 function runtime(html){
  const elements=new Map(),element=key=>{if(!elements.has(key))elements.set(key,{value:'fixed',innerHTML:'',textContent:'',style:{},dataset:{},classList:{add(){},remove(){},toggle(){}},insertAdjacentHTML(){},scrollIntoView(){},appendChild(){},closest(){return null}});return elements.get(key)};
  const ctx=vm.createContext({console,assert,structuredClone,Math,Set,Map,JSON,Number,String,Array,Object,Date,localStorage:{getItem:()=>null,setItem(){}},document:{querySelector:element,querySelectorAll:()=>[],createElement:()=>element(Symbol()),body:element('body')},MutationObserver:class{observe(){}},matchMedia:()=>({matches:true}),setTimeout:()=>0,setInterval:()=>0,clearTimeout(){},clearInterval(){},location:{},history:{}});
- ctx.FantasyPlayerData={connect:()=>({debug:false})};
+ ctx.FantasyPlayerData={connect:()=>({debug:false}),correctFormation:(_c,ids)=>ids,formationError:()=>''};
  for(const file of ['characters.js','npc.js','campaign-chapters.js','campaign-chapter5.js'])vm.runInContext(fs.readFileSync(file,'utf8'),ctx);
  for(const match of fs.readFileSync(html,'utf8').matchAll(/<script>([\s\S]*?)<\/script>/g))vm.runInContext(match[1],ctx);
  return code=>vm.runInContext(code,ctx);
