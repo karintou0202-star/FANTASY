@@ -48,10 +48,25 @@
    const result=update('story-reward:'+key,data=>{reward=grant(data,key)});
    return {...reward,applied:result.applied,data:result.data};
   }
+  function recordStreakWin(wins){
+   if(!Number.isSafeInteger(wins)||wins<1)throw Error('連勝数が不正です');
+   const current=load(),history=Array.isArray(current.streakRewards)?current.streakRewards:[];
+   const highest=Math.max(Number.isSafeInteger(current.highestStreak)?current.highestStreak:0,...history.filter(n=>Number.isSafeInteger(n)&&n>0));
+   if(wins<=highest)return {awarded:0,data:current};
+   let awarded=0;
+   const result=update('streak-win:'+wins,data=>{
+    const previous=Array.isArray(data.streakRewards)?data.streakRewards:[];
+    const max=Math.max(Number.isSafeInteger(data.highestStreak)?data.highestStreak:0,...previous.filter(n=>Number.isSafeInteger(n)&&n>0));
+    if(wins<=max)return;
+    if(!Number.isSafeInteger(data.stones)||data.stones<0)throw Error('ガチャ石の保存データが不正です');
+    data.stones++;data.highestStreak=wins;data.streakRewards=[...previous,wins];awarded=1;
+   });
+   return {awarded,data:result.data};
+  }
   function debugEnabled(search){return new URLSearchParams(search).get('fantasyDebug')==='1'}
   function getDebugFormation(){const saved=parse(DEBUG_FORMATION);return Array.isArray(saved)&&saved.length===2?saved.slice():['vanilla','vanilla_clone']}
   function setDebugFormation(ids){if(!Array.isArray(ids)||ids.length!==2)throw Error('two units required');storage.setItem(DEBUG_FORMATION,JSON.stringify(ids))}
-  return {load,update,completeStory,debugEnabled,getDebugFormation,setDebugFormation};
+  return {load,update,completeStory,recordStreakWin,debugEnabled,getDebugFormation,setDebugFormation};
  }
  function validateFormation(ids,chars,owned,debug=false){
   if(!Array.isArray(ids)||ids.length!==2)return 'ユニットを2体選択してください。';
