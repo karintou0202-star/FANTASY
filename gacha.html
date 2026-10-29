@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>黒アリスのお茶会｜ガチャ</title>
+<style>
+:root{color-scheme:dark;--bg:#090d14;--panel:#171f2c;--panel2:#222d40;--line:#3a4860;--text:#eef2f8;--muted:#a9b4c5;--gold:#e7bd65}*{box-sizing:border-box}body{margin:0;background:linear-gradient(#0b1018,#080b11);color:var(--text);font-family:system-ui,sans-serif;padding:18px}main{max-width:960px;margin:auto}h1,h2{color:var(--gold)}.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;margin:12px 0}.muted{color:var(--muted);line-height:1.7}.btn{display:inline-block;border:0;border-radius:10px;padding:12px 18px;background:var(--gold);color:#241b0c;font-weight:800;cursor:pointer;text-decoration:none}.btn.secondary{background:#36445a;color:var(--text)}.btn:disabled{opacity:.4;cursor:not-allowed}.actions{display:flex;gap:8px;flex-wrap:wrap}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}.card{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px}.result{min-height:2em;color:var(--gold);font-weight:700}.hidden{display:none!important}a{color:var(--gold)}
+</style></head><body><main>
+<header><h1>黒アリスのお茶会</h1><p class="muted">ガチャとユニット交換</p><a class="btn secondary" href="formation-preview.html">編成画面へ戻る</a></header>
+<section class="panel" id="status"><h2>所持状況</h2><div class="grid"><div class="card">ガチャ石 <b id="stones">0</b>個</div><div class="card">チュートリアル券 <b id="ticket">未使用</b></div></div><h3>交換ポイント</h3><div class="grid" id="points"></div></section>
+<section class="panel" id="tutorial"><h2>チュートリアルガチャ</h2><p class="muted">ココ・アゾアラス・ギガガルド・ヒカケの中から1体を選べます。各25%。確定まで何度でも引き直せます。</p><div class="result" id="preview" aria-live="polite">抽選前</div><div class="actions"><button class="btn" id="reroll">抽選する</button><button class="btn secondary" id="confirm" disabled>このユニットに決定</button></div></section>
+<section class="panel" id="normal"><h2>通常ガチャ</h2><p class="muted">1回：ガチャ石5個　／　★5：2%　★4：8%　★3：30%　★2：60%</p><p class="result" id="drawResult" aria-live="polite"></p><button class="btn" id="draw">ガチャを引く</button></section>
+<section class="panel" id="exchange"><h2>ユニット交換</h2><p class="muted">同じレア度の交換ポイント10個で、未所持のユニットを選んで交換できます。</p><div id="exchangeList"></div><p class="result" id="exchangeResult" aria-live="polite"></p></section>
+<section class="panel hidden" id="error" role="alert"></section>
+</main><script src="characters.js?v=0.39"></script><script src="player-data.js?v=3"></script><script src="gacha.js?v=1"></script><script>
+const context=FantasyPlayerData.connect(),$=s=>document.querySelector(s),game=FantasyGacha.create(context);let preview=null,busy=false;
+const operation=()=>globalThis.crypto?.randomUUID?.()||`${Date.now()}-${Math.random()}-${Math.random()}`;
+function error(message){$('#error').textContent=message;$('#error').classList.remove('hidden')}
+function guarded(fn){if(busy)return;busy=true;document.querySelectorAll('button').forEach(b=>b.disabled=true);try{$('#error').classList.add('hidden');fn()}catch(e){error(e.message)}finally{busy=false;render()}}
+function render(){
+ if(context.debug){$('#status').classList.add('hidden');$('#tutorial').classList.add('hidden');$('#normal').classList.add('hidden');$('#exchange').classList.add('hidden');error('デバッグモードではガチャと交換を利用できません。');return}
+ let data;try{data=game.state()}catch(e){error(e.message);return}
+ const used=data.tutorialTicket?.used===true;$('#stones').textContent=data.stones;$('#ticket').textContent=used?'使用済み':'1枚';$('#points').innerHTML=[5,4,3,2].map(r=>`<div class="card">★${r} <b>${data.exchangePoints[r]||0}</b> / 10</div>`).join('');
+ $('#tutorial').classList.toggle('hidden',used);$('#normal').classList.toggle('hidden',!used);$('#exchange').classList.toggle('hidden',!used);
+ $('#reroll').disabled=busy;$('#confirm').disabled=busy||!preview;$('#reroll').textContent=preview?'引き直す':'抽選する';$('#draw').disabled=busy||!used||data.stones<5;
+ $('#exchangeList').innerHTML=[5,4,3,2].map(r=>{const ids=game.candidates(r);return `<h3>★${r}（${data.exchangePoints[r]||0}ポイント）</h3><div class="actions">${ids.length?ids.map(id=>`<button class="btn secondary" data-exchange="${id}" data-rarity="${r}" ${busy||(data.exchangePoints[r]||0)<10?'disabled':''}>${CHARS[id].name}</button>`).join(''):'<span class="muted">交換できる未所持ユニットはいません</span>'}</div>`}).join('');
+ document.querySelectorAll('[data-exchange]').forEach(btn=>btn.onclick=()=>guarded(()=>{const result=game.exchange(Number(btn.dataset.rarity),btn.dataset.exchange,operation());if(result.applied)$('#exchangeResult').textContent=CHARS[result.id].name+'を仲間にしました！'}));
+}
+$('#reroll').onclick=e=>{if(e.detail>1)return;guarded(()=>{preview=game.tutorialDraw();$('#preview').textContent=CHARS[preview].name})};
+$('#confirm').onclick=e=>{if(e.detail>1)return;guarded(()=>{if(!preview)return;const result=game.confirmTutorial(preview,operation());if(result.applied){$('#drawResult').textContent=CHARS[result.id].name+(result.added?'を仲間にしました！':'は所持済みです。');preview=null}})};
+$('#draw').onclick=e=>{if(e.detail>1)return;guarded(()=>{const result=game.draw(operation());if(result.applied)$('#drawResult').textContent=CHARS[result.id].name+(result.duplicate?`は所持済みのため★${result.rarity}交換ポイントを1個獲得しました。`:'を仲間にしました！')})};
+try{if(!context.debug)game.ensureTicket()}catch(e){error(e.message)}render();
+</script></body></html>
