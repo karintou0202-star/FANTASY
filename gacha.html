@@ -9,7 +9,7 @@
 <section class="panel" id="normal"><h2>通常ガチャ</h2><p class="muted">1回：ガチャ石5個　／　★5：2%　★4：8%　★3：30%　★2：60%</p><p class="result" id="drawResult" aria-live="polite"></p><button class="btn" id="draw">ガチャを引く</button></section>
 <section class="panel" id="exchange"><h2>ユニット交換</h2><p class="muted">同じレア度の交換ポイント10個で、未所持のユニットを選んで交換できます。</p><div id="exchangeList"></div><p class="result" id="exchangeResult" aria-live="polite"></p></section>
 <section class="panel hidden" id="error" role="alert"></section>
-</main><script src="characters.js?v=0.39"></script><script src="player-data.js?v=3"></script><script src="gacha.js?v=1"></script><script>
+</main><script src="characters.js?v=0.39"></script><script src="player-data.js?v=5"></script><script src="gacha.js?v=1"></script><script>
 const context=FantasyPlayerData.connect(),$=s=>document.querySelector(s),game=FantasyGacha.create(context);let preview=null,busy=false;
 const operation=()=>globalThis.crypto?.randomUUID?.()||`${Date.now()}-${Math.random()}-${Math.random()}`;
 function error(message){$('#error').textContent=message;$('#error').classList.remove('hidden')}
