@@ -39,7 +39,7 @@
 const $=s=>document.querySelector(s);
 const allowed=['tsukune','jackeen','lowja','ggg','guren','zazan','larin','crow','bonret','vanilla','olympus','hero_lloyd','eiji','solenarif','solenarif_spy','arle','gasshaan','donbura','anmi','azoaras','gigagald','hikake','coco','kurukku','flame_azote','meilan','hinata','karzuf','ice','emon','kattole'];
 let formation=['vanilla','vanilla_clone'];
-try{const saved=playerContext.debug?playerContext.store.getDebugFormation():JSON.parse(localStorage.getItem('fantasyFormation'));if(Array.isArray(saved)&&saved.length===2&&saved.every(id=>allowed.includes(id)&&CHARS[id]))formation=saved}catch(e){}
+try{const saved=playerContext.debug?playerContext.store.getDebugFormation():playerContext.store.getNormalFormation(CHARS);if(Array.isArray(saved)&&saved.length===2&&saved.every(id=>allowed.includes(id)&&CHARS[id]))formation=saved}catch(e){}
 formation=FantasyPlayerData.correctFormation(playerContext,formation,CHARS);if(formation[1]==='vanilla_clone')formation[1]='vanilla';
 let target=0;
 let page=1;
