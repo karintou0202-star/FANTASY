@@ -186,7 +186,7 @@ function charCard(c,displayName=c.name){
 function initSetup(){
   setupFormation=['tsukune','lowja'];
   try{
-    const saved=playerContext.debug?playerContext.store.getDebugFormation():JSON.parse(localStorage.getItem('fantasyFormation'));
+    const saved=playerContext.debug?playerContext.store.getDebugFormation():playerContext.store.getNormalFormation(CHARS);
     if(Array.isArray(saved)&&saved.length===2&&saved.every(id=>CHARS[id]&&(!playerContext.debug||CHARS[id].selectable!==false||id==='vanilla_clone')))setupFormation=saved;
   }catch(e){}
   setupFormation=FantasyPlayerData.correctFormation(playerContext,setupFormation,CHARS);
