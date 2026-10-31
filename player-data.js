@@ -28,7 +28,8 @@
    const id=REWARDS[key];if(!id)throw Error('Unknown story reward');
    data.storyRewards??={};data.owned??=[];
    if(data.storyRewards[key])return {id,newlyAdded:false};
-   const newlyAdded=!data.owned.includes(id);if(newlyAdded)data.owned.push(id);
+   const replaced=id==='solenarif'&&(data.solenarifAwakened||data.owned.includes('solenarif_spy'));
+   const newlyAdded=!replaced&&!data.owned.includes(id);if(newlyAdded)data.owned.push(id);
    data.storyRewards[key]=true;
    if(key==='tutorial')data.tutorialComplete=true;else{data.chapterClears??={};data.chapterClears[key]=true}
    return {id,newlyAdded};
@@ -63,10 +64,28 @@
    });
    return {awarded,data:result.data};
   }
+  function getNormalFormation(chars){
+   const data=load(),legacy=parse('fantasyFormation');
+   let formation=Array.isArray(legacy)&&legacy.length===2?legacy:clone(data.normalFormation);
+   if(data.solenarifAwakened&&Array.isArray(formation))formation=formation.map(id=>id==='solenarif'?'solenarif_spy':id);
+   return validateFormation(formation,chars,data.owned,false)?['vanilla','vanilla_clone']:formation;
+  }
+  function unlockSolenarif(chars,options={}){
+   if(options.debug)throw Error('デバッグモードでは真価を解放できません');
+   if(!chars?.solenarif||!chars?.solenarif_spy)throw Error('ソレナリフの定義がありません');
+   const legacy=parse('fantasyFormation');
+   return update('awaken-solenarif-v1',data=>{
+    data.owned=data.owned.filter(id=>id!=='solenarif'&&id!=='solenarif_spy');
+    data.owned.push('solenarif_spy');data.solenarifAwakened=true;
+    let formation=Array.isArray(legacy)&&legacy.length===2?legacy:data.normalFormation;
+    if(Array.isArray(formation))formation=formation.map(id=>id==='solenarif'?'solenarif_spy':id);
+    data.normalFormation=validateFormation(formation,chars,data.owned,false)?['vanilla','vanilla_clone']:formation;
+   });
+  }
   function debugEnabled(search){return new URLSearchParams(search).get('fantasyDebug')==='1'}
   function getDebugFormation(){const saved=parse(DEBUG_FORMATION);return Array.isArray(saved)&&saved.length===2?saved.slice():['vanilla','vanilla_clone']}
   function setDebugFormation(ids){if(!Array.isArray(ids)||ids.length!==2)throw Error('two units required');storage.setItem(DEBUG_FORMATION,JSON.stringify(ids))}
-  return {load,update,completeStory,recordStreakWin,debugEnabled,getDebugFormation,setDebugFormation};
+  return {load,update,completeStory,recordStreakWin,unlockSolenarif,getNormalFormation,debugEnabled,getDebugFormation,setDebugFormation};
  }
  function validateFormation(ids,chars,owned,debug=false){
   if(!Array.isArray(ids)||ids.length!==2)return 'ユニットを2体選択してください。';
@@ -79,7 +98,7 @@
   if(pair[0].rarity+pair[1].rarity>7)return '合計レア度は7以下にしてください。';
   return '';
  }
- function formationError(context,ids,chars){try{return validateFormation(ids,chars,context.debug?[]:context.store.load().owned,context.debug)}catch(e){return 'セーブデータを読み込めません。'}}
+ function formationError(context,ids,chars){try{const data=context.debug?null:context.store.load();if(!context.debug&&data.solenarifAwakened&&ids.includes('solenarif'))return '真価解放済みのため通常ソレナリフは編成できません。';return validateFormation(ids,chars,data?.owned||[],context.debug)}catch(e){return 'セーブデータを読み込めません。'}}
  function correctFormation(context,ids,chars){
   if(!formationError(context,ids,chars))return ids;
   const fallback=['vanilla','vanilla_clone'];
@@ -94,5 +113,6 @@
   if(debug)document.addEventListener('DOMContentLoaded',()=>{const badge=document.createElement('span');badge.textContent='DEBUG';badge.style.cssText='position:fixed;top:4px;right:4px;z-index:9999;background:#933;color:white;font:12px sans-serif;padding:3px 6px';document.body.appendChild(badge);document.querySelectorAll('a[href]').forEach(a=>{const u=new URL(a.href,location.href);if(u.origin===location.origin&&/\.html$/.test(u.pathname)){u.searchParams.set('fantasyDebug','1');a.href=u.href}})});
   return result;
  }
- const api={create,connect,validateFormation,formationError,correctFormation,KEY,DEBUG_FORMATION};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.FantasyPlayerData=api;
+ function unlockSolenarif(context,chars){if(context.debug)throw Error('デバッグモードでは真価を解放できません');if(context.error||!context.store)throw Error('セーブデータを読み込めません');return context.store.unlockSolenarif(chars)}
+ const api={create,connect,unlockSolenarif,validateFormation,formationError,correctFormation,KEY,DEBUG_FORMATION};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.FantasyPlayerData=api;
 })(typeof globalThis!=='undefined'?globalThis:this);
